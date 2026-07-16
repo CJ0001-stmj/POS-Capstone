@@ -301,7 +301,7 @@ body {
     color: #900; 
 }
 
-/* ================= INTRO SCREEN =================
+/* ================= INTRO SCREEN ================= */
 .intro-screen {
 position: fixed;
 inset: 0;
@@ -471,7 +471,7 @@ to { opacity: 1; transform: translateY(0); }
 50% { opacity: 0.3; }
 } */
 
-/* Main container reveal
+/* /* Main container reveal */
 .main-container {
 opacity: 0;
 }
@@ -483,4 +483,4 @@ animation: mainReveal 0.8s ease forwards;
 @keyframes mainReveal {
 from { opacity: 0; }
 to { opacity: 1; }
-} */
+}
