@@ -1,6 +1,6 @@
 /* ============ Analytics layout ============ */
 .an-panel {
-    background: #fff;
+    background: var(--ram-cream);
     border-radius: 16px;
     box-shadow: 0 10px 24px rgba(117,11,29,0.08);
     padding: 20px 22px;

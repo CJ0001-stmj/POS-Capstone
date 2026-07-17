@@ -536,6 +536,15 @@
 }
 @keyframes pos-spin { to { transform: rotate(360deg); } }
 
+.pos-receipt-followup {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(117,11,29,0.2);
+}
+
 /* receipt */
 .pos-receipt-modal { max-width: 400px; }
 .pos-receipt-check {

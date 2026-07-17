@@ -211,4 +211,4 @@ INSERT INTO `sale_items` (`sale_id`, `product_id`, `product_name`, `unit_price`,
 -- historical sale, distinct from the product's current catalog price —
 -- illustrates why sale_items stores its own price snapshot.)
 
-COMMIT;
+COMMIT;   

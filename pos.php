@@ -301,6 +301,10 @@ $promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
                 <i class="fa-solid fa-plus"></i> New Sale
             </button>
         </div>
+        <div class="pos-receipt-followup" id="receiptFollowup" style="display:none;">
+            <a href="receipt-history.php" id="viewReceiptLink" target="_blank" class="table-link"><i class="fa-solid fa-clock-rotate-left"></i> View in Receipt History</a>
+            <a href="stock-monitoring.php" target="_blank" class="table-link"><i class="fa-solid fa-boxes-stacked"></i> View Stock Monitoring</a>
+        </div>
     </div>
 </div>
 

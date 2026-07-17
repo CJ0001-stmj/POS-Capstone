@@ -281,7 +281,7 @@ body {
 
 .kpi-card {
     position: relative;
-    background: #fff;
+    background: var(--ram-cream);
     border-radius: 14px;
     padding: 18px 20px 16px;
     box-shadow: 0 10px 24px rgba(117,11,29,0.08);
@@ -614,6 +614,130 @@ body {
 }
 .stock-badge.stock-critical { background: rgba(179,38,30,0.12); color: #b3261e; }
 .stock-badge.stock-low { background: rgba(184,121,11,0.14); color: var(--ram-warn); }
+.stock-badge.stock-out { background: rgba(43,24,16,0.14); color: var(--ram-ink); }
+.stock-badge.stock-ok { background: rgba(46,125,79,0.12); color: var(--ram-good); }
+
+/* ============ FILTER BAR (Stock Monitoring / Receipt History) ============ */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.filter-select, .filter-input {
+    border: 2px solid rgba(117,11,29,0.15);
+    border-radius: 50px;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    color: var(--ram-ink);
+    background: #fff;
+    font-family: inherit;
+}
+
+.filter-select:focus, .filter-input:focus {
+    outline: none;
+    border-color: var(--ram-red);
+}
+
+.filter-input { flex: 1; min-width: 160px; }
+
+.table-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ram-red);
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.table-link:hover { color: var(--ram-red-dark); text-decoration: underline; }
+
+/* ============ RECEIPT HISTORY ============ */
+.filter-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--ram-yellow);
+    color: var(--ram-red-dark);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 18px;
+}
+.filter-banner a {
+    color: var(--ram-red-dark);
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.filter-banner a:hover { text-decoration: underline; }
+
+.receipt-table tbody tr.receipt-row { cursor: pointer; }
+.receipt-table tbody tr.receipt-row:hover { background: rgba(117,11,29,0.04); }
+
+.receipt-caret {
+    font-size: 0.7rem;
+    color: var(--ram-muted);
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+.receipt-row.receipt-row-open .receipt-caret { transform: rotate(90deg); }
+
+.receipt-detail-row td {
+    padding: 0 8px 14px !important;
+    border-bottom: 1px dashed rgba(117,11,29,0.12);
+}
+
+.receipt-detail {
+    background: rgba(117,11,29,0.04);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.receipt-detail-lines {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.receipt-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--ram-ink);
+}
+
+.receipt-detail-summary {
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.8rem;
+}
+
+.receipt-detail-summary div { display: flex; justify-content: space-between; gap: 20px; }
+.receipt-detail-summary span:first-child { color: var(--ram-muted); }
+.receipt-detail-total { font-weight: 800; color: var(--ram-red); border-top: 1px dashed rgba(117,11,29,0.2); padding-top: 6px; }
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 18px;
+}
+.pagination-label { font-size: 0.8rem; color: var(--ram-muted); font-weight: 700; }
 
 /* transactions panel actions */
 .panel-actions { display: flex; gap: 8px; }

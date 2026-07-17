@@ -371,6 +371,16 @@ confirmProceed.addEventListener('click', async () => {
         receiptOverlay.classList.add('show');
         applyStockFromReceipt(lastReceipt);
 
+        // Point the follow-up links at this specific receipt so the cashier
+        // (or a manager) can jump straight to it in the receipts directory,
+        // or to the stock board that just got decremented by this sale.
+        const viewReceiptLink = document.getElementById('viewReceiptLink');
+        const receiptFollowup = document.getElementById('receiptFollowup');
+        if (viewReceiptLink && receiptFollowup) {
+            viewReceiptLink.href = `receipt-history.php?receipt=${encodeURIComponent(lastReceipt.receipt_no)}`;
+            receiptFollowup.style.display = 'flex';
+        }
+
         // Reset the working order now that the sale is committed server-side.
         cart.clear();
         amountReceivedEl.value = '';
