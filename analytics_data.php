@@ -23,38 +23,36 @@ if (!in_array($metric, ['revenue','profit'], true)) {
 $topN = (int)($_GET['top'] ?? 8);
 if ($topN <= 0 || $topN > 20) $topN = 8;
 
+// NOTE: this schema has no per-line profit snapshot, so profit is always
+// derived as (unit_price - product.cost) * quantity, using each product's
+// *current* cost. If a product's cost changes later, historical profit
+// figures computed this way will shift too — same approach used in
+// dashboard.php's KPI/chart queries, for consistency.
+
 function bucket_label_and_group_sql(string $range): array {
-    // Returns [label_sql, group_sql, order_sql]
-    // label_sql is used in SELECT, group_sql in GROUP BY.
+    // Returns [label_sql, group_sql]. label_sql is wrapped in MIN() by the
+    // caller so this stays valid under strict ONLY_FULL_GROUP_BY SQL mode.
     switch ($range) {
         case 'daily':
-            // YYYY-MM-DD
             return [
-                "DATE(s.sale_date) AS bucket_label",
-                "DATE(s.sale_date)",
-                "bucket"
+                "DATE_FORMAT(s.created_at, '%Y-%m-%d')",
+                "DATE(s.created_at)",
             ];
         case 'weekly':
-            // ISO week-like: YEAR + week number (mode 1)
             return [
-                "CONCAT(YEAR(s.sale_date), '-W', LPAD(WEEK(s.sale_date, 1), 2, '0')) AS bucket_label",
-                "YEAR(s.sale_date), WEEK(s.sale_date, 1)",
-                "bucket"
+                "CONCAT(YEAR(s.created_at), '-W', LPAD(WEEK(s.created_at, 1), 2, '0'))",
+                "YEAR(s.created_at), WEEK(s.created_at, 1)",
             ];
         case 'monthly':
-            // YYYY-MM
             return [
-                "DATE_FORMAT(s.sale_date, '%Y-%m') AS bucket_label",
-                "DATE_FORMAT(s.sale_date, '%Y-%m')",
-                "bucket"
+                "DATE_FORMAT(s.created_at, '%Y-%m')",
+                "DATE_FORMAT(s.created_at, '%Y-%m')",
             ];
         case 'yearly':
         default:
-            // YYYY
             return [
-                "YEAR(s.sale_date) AS bucket_label",
-                "YEAR(s.sale_date)",
-                "bucket"
+                "YEAR(s.created_at)",
+                "YEAR(s.created_at)",
             ];
     }
 }
@@ -82,21 +80,29 @@ switch ($range) {
 $startStr = $start->format('Y-m-d H:i:s');
 $endStr = $now->format('Y-m-d H:i:s');
 
-[$labelSelectSql, $groupSql, $orderKey] = bucket_label_and_group_sql($range);
+[$labelSql, $groupSql] = bucket_label_and_group_sql($range);
 
-// Ensure group/order works consistently by selecting with an alias we can order.
-// We'll order by actual bucket expression again in a derived query.
+// Per-sale profit, derived from sale_items joined to each product's
+// current cost, then rolled up by time bucket alongside each sale's total.
 $timeSeriesSql = "
-    SELECT bucket_label, sales, profit, tx_count, profit_margin
+    SELECT bucket_label, sales, profit, tx_count,
+           CASE WHEN sales = 0 THEN 0 ELSE (profit / sales) END AS profit_margin
     FROM (
-        SELECT 
-            {$labelSelectSql},
-            SUM(s.total_amount) AS sales,
-            SUM(s.total_profit) AS profit,
-            COUNT(*) AS tx_count,
-            CASE WHEN SUM(s.total_amount) = 0 THEN 0 ELSE (SUM(s.total_profit) / SUM(s.total_amount)) END AS profit_margin
+        SELECT
+            MIN({$labelSql}) AS bucket_label,
+            SUM(s.total) AS sales,
+            SUM(COALESCE(ip.profit, 0)) AS profit,
+            COUNT(DISTINCT s.id) AS tx_count
         FROM sales s
-        WHERE s.sale_date >= :start AND s.sale_date <= :end
+        LEFT JOIN (
+            SELECT si.sale_id,
+                   SUM((si.unit_price - COALESCE(p.cost, 0)) * si.quantity) AS profit
+            FROM sale_items si
+            LEFT JOIN products p ON p.id = si.product_id
+            GROUP BY si.sale_id
+        ) ip ON ip.sale_id = s.id
+        WHERE s.status = 'completed'
+          AND s.created_at >= :start AND s.created_at <= :end
         GROUP BY {$groupSql}
     ) t
     ORDER BY bucket_label
@@ -129,28 +135,28 @@ if ($totalSales > 0) {
 }
 $txTotal = array_sum($txCounts);
 
-// Product ranking
-$rankingMetricExpr = $metric === 'revenue' ? 'SUM(si.line_total)' : 'SUM(si.line_profit)';
+// Product ranking — grouped by the snapshotted product_name (so it still
+// ranks correctly even if a product was later renamed or deleted), with
+// revenue/profit computed over the same time window.
+$orderExpr = $metric === 'revenue' ? 'revenue' : 'profit';
 
-// Use same time window
 $rankingSql = "
-    SELECT 
-        p.id,
-        p.name,
-        p.sku,
+    SELECT
+        si.product_id AS id,
+        si.product_name AS name,
+        COALESCE(p.sku, '—') AS sku,
         SUM(si.quantity) AS units_sold,
         SUM(si.line_total) AS revenue,
-        SUM(si.line_profit) AS profit
+        SUM((si.unit_price - COALESCE(p.cost, 0)) * si.quantity) AS profit
     FROM sale_items si
     JOIN sales s ON s.id = si.sale_id
-    JOIN products p ON p.id = si.product_id
+    LEFT JOIN products p ON p.id = si.product_id
     WHERE s.status = 'completed'
-      AND s.sale_date >= :start AND s.sale_date <= :end
-    GROUP BY p.id, p.name, p.sku
-    ORDER BY {$rankingMetricExpr} DESC
+      AND s.created_at >= :start AND s.created_at <= :end
+    GROUP BY si.product_id, si.product_name, p.sku
+    ORDER BY {$orderExpr} DESC
     LIMIT {$topN}
 ";
-
 
 $rankStmt = $db->prepare($rankingSql);
 $rankStmt->execute([':start' => $startStr, ':end' => $endStr]);
@@ -176,4 +182,3 @@ echo json_encode([
     ],
     'ranking' => $ranking,
 ]);
-

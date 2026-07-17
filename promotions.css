@@ -1,0 +1,230 @@
+/* ============ Promotions page ============ */
+.promo-content { padding: 22px 28px; }
+
+.promo-flash {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+}
+.promo-flash-ok { background: rgba(46,125,79,0.12); color: var(--ram-good); }
+.promo-flash-error { background: rgba(179,38,30,0.12); color: #b3261e; }
+
+/* ---- scan panel ---- */
+.promo-scan-panel .panel-head { flex-wrap: wrap; }
+
+.promo-reason-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 4px;
+}
+
+.promo-reason-card {
+    background: var(--ram-cream);
+    border: 2px solid rgba(117,11,29,0.15);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.promo-reason-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.promo-reason-icon {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ram-red);
+    color: var(--ram-yellow);
+    font-size: 0.9rem;
+}
+.promo-reason-near_expiration .promo-reason-icon { background: #b3261e; }
+.promo-reason-slow_selling .promo-reason-icon { background: var(--ram-warn); }
+.promo-reason-replaced_model .promo-reason-icon { background: #3a6ea5; }
+
+.promo-reason-count {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--ram-red);
+}
+.promo-reason-card strong { font-size: 0.92rem; color: var(--ram-ink); }
+.promo-reason-sub { font-size: 0.72rem; color: var(--ram-muted); margin-bottom: 6px; }
+
+.promo-reason-pct-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ram-muted);
+    text-transform: uppercase;
+    gap: 8px;
+}
+.promo-reason-pct {
+    width: 64px;
+    padding: 5px 8px;
+    border: 2px solid rgba(117,11,29,0.25);
+    border-radius: 8px;
+    font-weight: 800;
+    color: var(--ram-red);
+    text-align: right;
+}
+
+.promo-scan-btn { max-width: 220px; }
+
+.promo-scan-result {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+.promo-scan-ok { background: rgba(46,125,79,0.12); color: var(--ram-good); }
+.promo-scan-error { background: rgba(179,38,30,0.12); color: #b3261e; }
+
+/* ---- promotions table ---- */
+.promo-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.promo-table th {
+    text-align: left;
+    color: var(--ram-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 8px 10px;
+    border-bottom: 2px solid rgba(117,11,29,0.12);
+}
+.promo-table td {
+    padding: 10px;
+    border-bottom: 1px dashed rgba(117,11,29,0.12);
+    vertical-align: middle;
+}
+.promo-table tr:last-child td { border-bottom: none; }
+
+.auto-chip {
+    display: inline-block;
+    background: var(--ram-red);
+    color: var(--ram-yellow);
+    font-size: 0.6rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+}
+
+.reason-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(117,11,29,0.1);
+    color: var(--ram-red);
+}
+.reason-badge.reason-near_expiration { background: rgba(179,38,30,0.12); color: #b3261e; }
+.reason-badge.reason-slow_selling { background: rgba(184,121,11,0.14); color: var(--ram-warn); }
+.reason-badge.reason-replaced_model { background: rgba(58,110,165,0.14); color: #3a6ea5; }
+
+.stock-badge.stock-active { background: rgba(46,125,79,0.12); color: var(--ram-good); }
+
+.promo-window { color: var(--ram-muted); font-size: 0.78rem; white-space: nowrap; }
+
+.promo-row-actions { white-space: nowrap; }
+.row-icon-btn {
+    background: none;
+    border: none;
+    color: var(--ram-red);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+.row-icon-btn.row-icon-danger { color: #b3261e; }
+.row-icon-btn:hover { opacity: 0.7; }
+
+/* ---- manual create form ---- */
+.promo-form { display: flex; flex-direction: column; }
+
+/* Shared form-field + button styles. promotions.php doesn't load pos.css,
+   so these live here too (kept in sync with the versions in pos.css). */
+.pos-field-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ram-muted);
+    margin: 0 0 4px;
+}
+
+.pos-select, .pos-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 2px solid rgba(117,11,29,0.3);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: #fff;
+    outline: none;
+    color: var(--ram-ink);
+    font-family: inherit;
+}
+.pos-select:focus, .pos-input:focus { border-color: var(--ram-red); }
+
+.pos-btn-secondary, .pos-btn-primary {
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 2px solid var(--ram-red);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.2s ease;
+}
+.pos-btn-secondary { background: #fff; color: var(--ram-red); }
+.pos-btn-secondary:hover { background: var(--ram-bg); }
+.pos-btn-primary { background: var(--ram-red); color: #fff; }
+.pos-btn-primary:hover:not(:disabled) { background: var(--ram-red-dark); }
+.pos-btn-primary:disabled { background: #c9b8ab; border-color: #c9b8ab; cursor: not-allowed; }
+
+.promo-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.promo-product-picker {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px dashed rgba(117,11,29,0.25);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.promo-product-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.promo-product-option input { accent-color: var(--ram-red); }
+.promo-product-sku { color: var(--ram-muted); font-size: 0.7rem; margin-left: auto; }
+
+@media (max-width: 1100px) {
+    .promo-reason-grid { grid-template-columns: repeat(2, 1fr); }
+    .promo-form-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+    .promo-reason-grid { grid-template-columns: 1fr; }
+    .promo-form-grid { grid-template-columns: 1fr; }
+}

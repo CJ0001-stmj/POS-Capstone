@@ -23,6 +23,28 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
+-- Table: promotions
+-- Simple storewide percentage-off promos. A promo is "live" when
+-- is_active = 1 and the current moment falls within [starts_at, ends_at]
+-- (either bound may be NULL = open-ended). Scope is kept as an ENUM so
+-- per-category/per-product promos can be added later without a schema
+-- rewrite; pos_checkout.php currently only understands 'storewide'.
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `promotions`;
+CREATE TABLE `promotions` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(150) NOT NULL,
+  `scope` ENUM('storewide') NOT NULL DEFAULT 'storewide',
+  `discount_percent` DECIMAL(5,2) NOT NULL COMMENT 'e.g. 10.00 = 10% off',
+  `starts_at` DATETIME NULL DEFAULT NULL,
+  `ends_at` DATETIME NULL DEFAULT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_promotions_active_window` (`is_active`, `starts_at`, `ends_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 -- Table: products
 -- --------------------------------------------------------
 DROP TABLE IF EXISTS `products`;
@@ -58,6 +80,8 @@ CREATE TABLE `sales` (
   `cashier_email` VARCHAR(255) NULL DEFAULT NULL,
   `subtotal` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `discount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `promotion_id` INT(11) NULL DEFAULT NULL,
+  `promotion_name` VARCHAR(150) NULL DEFAULT NULL COMMENT 'snapshotted so receipts stay accurate if the promo is later edited/deleted',
   `total` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `amount_received` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `change_due` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -68,7 +92,9 @@ CREATE TABLE `sales` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_sales_receipt_no` (`receipt_no`),
   KEY `idx_sales_created` (`created_at`),
-  KEY `idx_sales_cashier` (`cashier_id`)
+  KEY `idx_sales_cashier` (`cashier_id`),
+  KEY `idx_sales_promotion` (`promotion_id`),
+  CONSTRAINT `fk_sales_promotion` FOREIGN KEY (`promotion_id`) REFERENCES `promotions` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -120,6 +146,14 @@ INSERT INTO `categories` (`name`, `icon`, `sort_order`) VALUES
 ('Sauces & Condiments',  'fa-jar',          4),
 ('Frozen & Instant',     'fa-snowflake',    5),
 ('Kimchi & Sides',       'fa-pepper-hot',   6);
+
+-- --------------------------------------------------------
+-- Seed: promotions (one open-ended storewide promo, active now, so the
+-- POS has something to auto-apply out of the box. Deactivate/delete once
+-- your real promotions module is managing these rows.)
+-- --------------------------------------------------------
+INSERT INTO `promotions` (`name`, `scope`, `discount_percent`, `starts_at`, `ends_at`, `is_active`) VALUES
+('Storewide Sale', 'storewide', 10.00, NULL, NULL, 1);
 
 -- --------------------------------------------------------
 -- Seed: products (some stock levels intentionally low to demo the

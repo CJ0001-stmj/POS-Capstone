@@ -116,7 +116,7 @@ $slowMovers = $db->query(
  *  TIME-SERIES PERFORMANCE — daily / weekly / monthly / yearly
  * ------------------------------------------------------------------ */
 function seriesQuery(PDO $db, string $groupExpr, string $labelExpr, string $sinceExpr, string $orderExpr): array {
-    $sql = "SELECT $labelExpr AS label,
+    $sql = "SELECT MIN($labelExpr) AS label,
                    COALESCE(SUM(si.line_total), 0) AS revenue,
                    COALESCE(SUM(si.line_total) - SUM(si.quantity * COALESCE(p.cost, 0)), 0) AS profit,
                    COUNT(DISTINCT s.id) AS txns
@@ -190,25 +190,7 @@ function pesos($n) { return '₱' . number_format((float) $n, 2); }
 <body>
 <div class="app-shell">
 
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <img src="assets/logo.png" alt="RAM-YUM Logo">
-            <div class="brand-text">
-                <strong>RAM-YUM</strong>
-                <span>Store Management</span>
-            </div>
-        </div>
-        <ul class="sidebar-nav">
-            <li><a href="dashboard.php"><i class="fa-solid fa-gauge-high"></i> Overview</a></li>
-            <li><a href="pos.php"><i class="fa-solid fa-cash-register"></i> Point of Sale</a></li>
-            <li><a href="purchase-requests.php"><i class="fa-solid fa-dolly"></i> Purchase Requests</a></li>
-            <li><a href="orders.php"><i class="fa-solid fa-bowl-food"></i> Orders &amp; Reservations</a></li>
-            <li class="active"><a href="analytics.php"><i class="fa-solid fa-chart-line"></i> Sales Analytics</a></li>
-            <li><a href="promotions.php"><i class="fa-solid fa-tags"></i> Promotions</a></li>
-            <li><a href="login_audit.php"><i class="fa-solid fa-user-shield"></i> Audit &amp; Access</a></li>
-        </ul>
-        <div class="sidebar-foot">Logged in as<br><strong style="color:var(--ram-yellow)"><?= htmlspecialchars($userEmail) ?></strong></div>
-    </aside>
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <div class="main-area">
         <header class="topbar">
@@ -420,12 +402,8 @@ function pesos($n) { return '₱' . number_format((float) $n, 2); }
 </div>
 
 <script>window.RAMYUM_ANALYTICS = <?= $analyticsJson ?: '{}' ?>;</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="analytics.js"></script>
-<script>
-document.getElementById('menuToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-});
-</script>
+<script src="sidebar.js"></script>
 </body>
 </html>

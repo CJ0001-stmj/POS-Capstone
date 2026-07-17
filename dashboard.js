@@ -25,7 +25,19 @@ function calculateMargin(sales, profit) {
 function renderSalesChart() {
     const canvas = document.getElementById('salesChart');
     const data = window.SALES_CHART_DATA;
-    if (!canvas || !data || typeof Chart === 'undefined') return;
+    if (!canvas) return;
+    if (!data) {
+        console.error('Sales chart: window.SALES_CHART_DATA is missing.');
+        return;
+    }
+    if (typeof Chart === 'undefined') {
+        console.error('Sales chart: Chart.js did not load (check the CDN <script> tag/URL and your network connection).');
+        const wrap = canvas.closest('.chart-wrap');
+        if (wrap) {
+            wrap.innerHTML = '<p style="color:var(--ram-muted); font-size:0.85rem; margin:0;">Chart library failed to load — check your internet connection or the Chart.js script tag.</p>';
+        }
+        return;
+    }
 
     const styles = getComputedStyle(document.documentElement);
     const red = styles.getPropertyValue('--ram-red').trim() || '#750b1d';
@@ -52,9 +64,11 @@ function renderSalesChart() {
                     data: data.profit,
                     borderColor: '#b8790b',
                     backgroundColor: yellow + '33',
+                    borderDash: [6, 3],
                     fill: true,
                     tension: 0.35,
                     pointRadius: 3,
+                    pointStyle: 'rectRot',
                     pointBackgroundColor: '#b8790b',
                 }
             ]

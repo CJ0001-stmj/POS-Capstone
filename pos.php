@@ -6,6 +6,7 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['user_email'])) {
     exit;
 }
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/promotion_engine.php';
 
 $userEmail = $_SESSION['user_email'];
 $initials = strtoupper(substr($userEmail, 0, 1));
@@ -19,6 +20,21 @@ $products = $db->query(
     'SELECT id, category_id, sku, name, price, stock_qty, low_stock_threshold
      FROM products WHERE is_active = 1 ORDER BY name'
 )->fetchAll();
+
+// Best active clearance promo per product (Near Expiration / Out of Season /
+// Slow Selling / Replaced by Newer Model), maintained by the promotion
+// engine scan on the Promotions page. Merge it straight onto each product
+// row so the grid badge and cart math both read from one place.
+$productPromos = all_product_promotions($db);
+foreach ($products as &$p) {
+    $promo = $productPromos[(int) $p['id']] ?? null;
+    $p['promo_id'] = $promo['promotion_id'] ?? null;
+    $p['promo_name'] = $promo['name'] ?? null;
+    $p['promo_reason'] = $promo['reason'] ?? null;
+    $p['promo_reason_label'] = $promo ? (PROMO_ENGINE_LABELS[$promo['reason']] ?? 'Promo') : null;
+    $p['promo_discount_percent'] = $promo['discount_percent'] ?? null;
+}
+unset($p);
 
 // Low stock (at or below threshold)
 $lowStock = $db->query(
@@ -51,7 +67,14 @@ if (count($bestSellers) === 0) {
     )->fetchAll();
 }
 
+
+// Active storewide promo (if any) - same helper pos_checkout.php uses to
+// resolve the real discount, so what the cashier previews in the cart
+// matches what actually gets applied at checkout.
+$activePromo = active_storewide_promotion($db);
+
 $productsJson = json_encode($products, JSON_NUMERIC_CHECK);
+$promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -67,25 +90,7 @@ $productsJson = json_encode($products, JSON_NUMERIC_CHECK);
 <body>
 <div class="app-shell">
 
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <img src="assets/logo.png" alt="RAM-YUM Logo">
-            <div class="brand-text">
-                <strong>RAM-YUM</strong>
-                <span>Store Management</span>
-            </div>
-        </div>
-        <ul class="sidebar-nav">
-            <li><a href="dashboard.php"><i class="fa-solid fa-gauge-high"></i> Overview</a></li>
-            <li class="active"><a href="pos.php"><i class="fa-solid fa-cash-register"></i> Point of Sale</a></li>
-            <li><a href="purchase-requests.php"><i class="fa-solid fa-dolly"></i> Purchase Requests</a></li>
-            <li><a href="orders.php"><i class="fa-solid fa-bowl-food"></i> Orders &amp; Reservations</a></li>
-            <li><a href="analytics.php"><i class="fa-solid fa-chart-line"></i> Sales Analytics</a></li>
-            <li><a href="promotions.php"><i class="fa-solid fa-tags"></i> Promotions</a></li>
-            <li><a href="login_audit.php"><i class="fa-solid fa-user-shield"></i> Audit &amp; Access</a></li>
-        </ul>
-        <div class="sidebar-foot">Logged in as<br><strong style="color:var(--ram-yellow)"><?= htmlspecialchars($userEmail) ?></strong></div>
-    </aside>
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <div class="main-area">
         <header class="topbar">
@@ -170,16 +175,28 @@ $productsJson = json_encode($products, JSON_NUMERIC_CHECK);
                     </div>
 
                     <div class="pos-product-grid" id="productGrid">
-                        <?php foreach ($products as $p): $out = $p['stock_qty'] <= 0; ?>
-                        <button type="button" class="pos-product-card <?= $out ? 'out' : '' ?>"
+                        <?php foreach ($products as $p): $out = $p['stock_qty'] <= 0; $hasPromo = $p['promo_discount_percent'] !== null; ?>
+                        <button type="button" class="pos-product-card <?= $out ? 'out' : '' ?> <?= $hasPromo ? 'has-promo promo-' . htmlspecialchars($p['promo_reason']) : '' ?>"
                                 data-id="<?= (int)$p['id'] ?>"
                                 data-category="<?= (int)$p['category_id'] ?>"
                                 data-name="<?= htmlspecialchars($p['name']) ?>"
                                 data-sku="<?= htmlspecialchars($p['sku']) ?>"
                                 <?= $out ? 'disabled' : '' ?>>
+                            <?php if ($hasPromo): ?>
+                                <span class="p-promo-badge"><i class="fa-solid fa-tag"></i> <?= htmlspecialchars($p['promo_reason_label']) ?></span>
+                            <?php endif; ?>
                             <span class="p-name"><?= htmlspecialchars($p['name']) ?></span>
                             <span class="p-sku"><?= htmlspecialchars($p['sku']) ?></span>
-                            <span class="p-price">₱<?= number_format((float)$p['price'], 2) ?></span>
+                            <?php if ($hasPromo):
+                                $discounted = (float)$p['price'] * (1 - (float)$p['promo_discount_percent'] / 100);
+                            ?>
+                                <span class="p-price">
+                                    <span class="p-price-strike">₱<?= number_format((float)$p['price'], 2) ?></span>
+                                    ₱<?= number_format($discounted, 2) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="p-price">₱<?= number_format((float)$p['price'], 2) ?></span>
+                            <?php endif; ?>
                             <span class="p-stock <?= $p['stock_qty'] <= $p['low_stock_threshold'] ? 'low' : '' ?>">
                                 <?= $out ? 'Out of stock' : (int)$p['stock_qty'] . ' in stock' ?>
                             </span>
@@ -198,12 +215,23 @@ $productsJson = json_encode($products, JSON_NUMERIC_CHECK);
                         </button>
                     </div>
 
+                    <?php if ($activePromo): ?>
+                    <label class="pos-promo-banner" for="applyPromoToggle">
+                        <input type="checkbox" id="applyPromoToggle" checked>
+                        <i class="fa-solid fa-tag"></i>
+                        <span>Apply <?= htmlspecialchars($activePromo['name']) ?> — <?= rtrim(rtrim(number_format((float)$activePromo['discount_percent'], 2), '0'), '.') ?>% off</span>
+                    </label>
+                    <?php endif; ?>
+
                     <div class="pos-cart-items" id="cartItems">
                         <p class="pos-empty-note" id="cartEmptyNote">Tap a product to add it to the order.</p>
                     </div>
 
                     <div class="pos-cart-summary">
                         <div class="row"><span>Subtotal</span><span id="sumSubtotal">₱0.00</span></div>
+                        <div class="row discount" id="sumDiscountRow" style="display:none;">
+                            <span id="sumDiscountLabel">Discount</span><span id="sumDiscount">-₱0.00</span>
+                        </div>
                         <div class="row total"><span>Total</span><span id="sumTotal">₱0.00</span></div>
 
                         <label class="pos-field-label">Payment method</label>
@@ -237,6 +265,9 @@ $productsJson = json_encode($products, JSON_NUMERIC_CHECK);
         <div class="pos-modal-items" id="confirmItems"></div>
         <div class="pos-modal-totals">
             <div class="row"><span>Subtotal</span><span id="confirmSubtotal">₱0.00</span></div>
+            <div class="row discount" id="confirmDiscountRow" style="display:none;">
+                <span id="confirmDiscountLabel">Discount</span><span id="confirmDiscount">-₱0.00</span>
+            </div>
             <div class="row"><span>Total Due</span><span id="confirmTotal">₱0.00</span></div>
             <div class="row"><span>Amount Received</span><span id="confirmReceived">₱0.00</span></div>
             <div class="row change"><span>Change</span><span id="confirmChange">₱0.00</span></div>
@@ -273,13 +304,12 @@ $productsJson = json_encode($products, JSON_NUMERIC_CHECK);
     </div>
 </div>
 
-<script>window.RAMYUM_PRODUCTS = <?= $productsJson ?: '[]' ?>;</script>
+<script>
+window.RAMYUM_PRODUCTS = <?= $productsJson ?: '[]' ?>;
+window.RAMYUM_PROMO = <?= $promoJson ?: 'null' ?>;
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="pos.js"></script>
-<script>
-document.getElementById('menuToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-});
-</script>
+<script src="sidebar.js"></script>
 </body>
 </html>

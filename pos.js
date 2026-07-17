@@ -7,9 +7,33 @@ const PRODUCTS = window.RAMYUM_PRODUCTS || [];
 const PRODUCTS_BY_ID = new Map(PRODUCTS.map(p => [Number(p.id), p]));
 const CHECKOUT_API_URL = 'pos_checkout.php';
 
+// Active storewide promo, e.g. {id, name, discount_percent}. This is only
+// a preview for the cashier - pos_checkout.php independently re-resolves
+// the live promotion server-side and is the actual source of truth for
+// what discount gets applied and recorded on the sale.
+const ACTIVE_PROMO = window.RAMYUM_PROMO || null;
+const applyPromoToggleEl = document.getElementById('applyPromoToggle');
+
 // cart: Map<productId, {id, name, sku, price, stock_qty, qty}>
 const cart = new Map();
 let lastReceipt = null;
+
+function promoApplied() {
+    // No active promo, or the cashier unchecked the toggle -> no discount.
+    return !!ACTIVE_PROMO && (!applyPromoToggleEl || applyPromoToggleEl.checked);
+}
+
+function calcDiscount(subtotal) {
+    if (!promoApplied() || subtotal <= 0) return 0;
+    return Math.round(subtotal * (Number(ACTIVE_PROMO.discount_percent) / 100) * 100) / 100;
+}
+
+function formatPromoLabel() {
+    if (!ACTIVE_PROMO) return 'Discount';
+    const pct = Number(ACTIVE_PROMO.discount_percent);
+    const pctStr = pct % 1 === 0 ? pct.toFixed(0) : pct.toString();
+    return `${ACTIVE_PROMO.name} (-${pctStr}%)`;
+}
 
 // ---------- helpers ----------
 function formatPeso(n) {
@@ -99,6 +123,32 @@ function removeLine(id) {
     renderCart();
 }
 
+// After a sale commits, the server is the source of truth for stock -
+// patch it into PRODUCTS_BY_ID and the visible cards so the grid reflects
+// reality immediately, without a full page reload.
+function applyStockFromReceipt(receipt) {
+    for (const item of receipt.items) {
+        const product = PRODUCTS_BY_ID.get(Number(item.product_id));
+        if (!product) continue;
+        const remaining = Math.max(0, Number(item.remaining_stock));
+        product.stock_qty = remaining;
+
+        const card = productGrid.querySelector(`.pos-product-card[data-id="${item.product_id}"]`);
+        if (!card) continue;
+
+        const stockEl = card.querySelector('.p-stock');
+        const threshold = Number(product.low_stock_threshold);
+        const isOut = remaining <= 0;
+
+        card.classList.toggle('out', isOut);
+        card.disabled = isOut;
+        if (stockEl) {
+            stockEl.textContent = isOut ? 'Out of stock' : `${remaining} in stock`;
+            stockEl.classList.toggle('low', !isOut && !Number.isNaN(threshold) && remaining <= threshold);
+        }
+    }
+}
+
 // Product grid clicks (event delegation - grid is re-filtered, not rebuilt)
 productGrid.addEventListener('click', (e) => {
     const card = e.target.closest('.pos-product-card');
@@ -115,6 +165,9 @@ document.querySelectorAll('.pos-best-row[data-add-id]').forEach(row => {
 const cartItemsEl = document.getElementById('cartItems');
 const cartEmptyNote = document.getElementById('cartEmptyNote');
 const sumSubtotalEl = document.getElementById('sumSubtotal');
+const sumDiscountRowEl = document.getElementById('sumDiscountRow');
+const sumDiscountLabelEl = document.getElementById('sumDiscountLabel');
+const sumDiscountEl = document.getElementById('sumDiscount');
 const sumTotalEl = document.getElementById('sumTotal');
 const sumChangeEl = document.getElementById('sumChange');
 const paymentMethodEl = document.getElementById('paymentMethod');
@@ -152,8 +205,17 @@ function renderCart() {
     }
 
     const subtotal = cartSubtotal();
-    const total = subtotal; // no discount logic yet - matches server (discount = 0)
+    const discount = calcDiscount(subtotal);
+    const total = Math.round((subtotal - discount) * 100) / 100;
+
     sumSubtotalEl.textContent = formatPeso(subtotal);
+    if (discount > 0) {
+        sumDiscountLabelEl.textContent = formatPromoLabel();
+        sumDiscountEl.textContent = '-' + formatPeso(discount);
+        sumDiscountRowEl.style.display = 'flex';
+    } else {
+        sumDiscountRowEl.style.display = 'none';
+    }
     sumTotalEl.textContent = formatPeso(total);
 
     syncPaymentAndChange();
@@ -189,9 +251,15 @@ clearCartBtn.addEventListener('click', () => {
     }
 });
 
+if (applyPromoToggleEl) {
+    applyPromoToggleEl.addEventListener('change', renderCart);
+}
+
 // ---------- payment / change ----------
 function currentTotal() {
-    return cartSubtotal();
+    const subtotal = cartSubtotal();
+    const discount = calcDiscount(subtotal);
+    return Math.round((subtotal - discount) * 100) / 100;
 }
 
 function syncPaymentAndChange() {
@@ -221,6 +289,9 @@ amountReceivedEl.addEventListener('input', syncPaymentAndChange);
 const confirmOverlay = document.getElementById('confirmOverlay');
 const confirmItems = document.getElementById('confirmItems');
 const confirmSubtotal = document.getElementById('confirmSubtotal');
+const confirmDiscountRow = document.getElementById('confirmDiscountRow');
+const confirmDiscountLabel = document.getElementById('confirmDiscountLabel');
+const confirmDiscount = document.getElementById('confirmDiscount');
 const confirmTotal = document.getElementById('confirmTotal');
 const confirmReceived = document.getElementById('confirmReceived');
 const confirmChange = document.getElementById('confirmChange');
@@ -230,6 +301,8 @@ const confirmProceed = document.getElementById('confirmProceed');
 checkoutBtn.addEventListener('click', () => {
     if (cart.size === 0) return;
 
+    const subtotal = cartSubtotal();
+    const discount = calcDiscount(subtotal);
     const total = currentTotal();
     const received = paymentMethodEl.value === 'cash' ? (parseFloat(amountReceivedEl.value) || 0) : total;
     const change = paymentMethodEl.value === 'cash' ? Math.max(0, received - total) : 0;
@@ -245,7 +318,14 @@ checkoutBtn.addEventListener('click', () => {
         confirmItems.appendChild(row);
     }
 
-    confirmSubtotal.textContent = formatPeso(total);
+    confirmSubtotal.textContent = formatPeso(subtotal);
+    if (discount > 0) {
+        confirmDiscountLabel.textContent = formatPromoLabel();
+        confirmDiscount.textContent = '-' + formatPeso(discount);
+        confirmDiscountRow.style.display = 'flex';
+    } else {
+        confirmDiscountRow.style.display = 'none';
+    }
     confirmTotal.textContent = formatPeso(total);
     confirmReceived.textContent = formatPeso(received);
     confirmChange.textContent = formatPeso(change);
@@ -268,6 +348,7 @@ confirmProceed.addEventListener('click', async () => {
         cart: Array.from(cart.values()).map(l => ({ product_id: l.id, quantity: l.qty })),
         amount_received: paymentMethodEl.value === 'cash' ? (parseFloat(amountReceivedEl.value) || 0) : currentTotal(),
         payment_method: paymentMethodEl.value,
+        apply_promo: promoApplied(),
     };
 
     try {
@@ -288,6 +369,7 @@ confirmProceed.addEventListener('click', async () => {
         lastReceipt = data.receipt;
         renderReceipt(lastReceipt);
         receiptOverlay.classList.add('show');
+        applyStockFromReceipt(lastReceipt);
 
         // Reset the working order now that the sale is committed server-side.
         cart.clear();
@@ -320,7 +402,7 @@ function renderReceipt(receipt) {
         ${itemsHtml}
         <hr>
         <div class="r-line"><span>Subtotal</span><span>${formatPeso(receipt.subtotal)}</span></div>
-        <div class="r-line"><span>Discount</span><span>${formatPeso(receipt.discount)}</span></div>
+        <div class="r-line"><span>${receipt.promotion_name ? escapeHtml(receipt.promotion_name) : 'Discount'}</span><span>-${formatPeso(receipt.discount)}</span></div>
         <div class="r-line r-total"><span>TOTAL</span><span>${formatPeso(receipt.total)}</span></div>
         <div class="r-line"><span>Payment (${escapeHtml(receipt.payment_method.toUpperCase())})</span><span>${formatPeso(receipt.amount_received)}</span></div>
         <div class="r-line"><span>Change</span><span>${formatPeso(receipt.change_due)}</span></div>
@@ -358,7 +440,7 @@ document.getElementById('downloadReceiptBtn').addEventListener('click', () => {
 
     doc.text('--------------------------------', centerX, y, { align: 'center' }); y += 14;
     doc.text('Subtotal', 20, y); doc.text(formatPeso(lastReceipt.subtotal), 260, y, { align: 'right' }); y += 14;
-    doc.text('Discount', 20, y); doc.text(formatPeso(lastReceipt.discount), 260, y, { align: 'right' }); y += 14;
+    doc.text(lastReceipt.promotion_name || 'Discount', 20, y); doc.text('-' + formatPeso(lastReceipt.discount), 260, y, { align: 'right' }); y += 14;
     doc.setFont('courier', 'bold');
     doc.text('TOTAL', 20, y); doc.text(formatPeso(lastReceipt.total), 260, y, { align: 'right' }); y += 16;
     doc.setFont('courier', 'normal');

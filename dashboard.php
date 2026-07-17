@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/db.php';
 
 // Guard: bounce anyone without a valid session back to the login screen.
 if (empty($_SESSION['user_id']) || empty($_SESSION['user_email'])) {
@@ -10,72 +11,261 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['user_email'])) {
 $userEmail = $_SESSION['user_email'];
 $initials = strtoupper(substr($userEmail, 0, 1));
 
+$pdo = get_db_connection();
+
 // ---------------------------------------------------------------
-// Mock data placeholders. Wire each of these up to real queries
-// (transactions, products, staff_sessions, purchase_requests, etc.)
-// as those tables come online — the layout below is already built
-// to take them.
+// Helpers
 // ---------------------------------------------------------------
 
-// KPI strip — today + this month, sales + profit (feeds the margin
-// calculation in dashboard.js)
+function peso($n): string {
+    return '₱' . number_format((float)$n, 0);
+}
+
+/**
+ * Total sales + profit (revenue minus each line's current product cost)
+ * for completed sales within a date range.
+ */
+function sales_summary(PDO $pdo, string $start, string $end): array {
+    $sql = "SELECT
+                COALESCE(SUM(s.total), 0)               AS sales,
+                COALESCE(SUM(ip.profit), 0)              AS profit,
+                COUNT(DISTINCT s.id)                     AS trans_count
+            FROM sales s
+            LEFT JOIN (
+                SELECT si.sale_id,
+                       SUM((si.unit_price - COALESCE(p.cost, 0)) * si.quantity) AS profit
+                FROM sale_items si
+                LEFT JOIN products p ON p.id = si.product_id
+                GROUP BY si.sale_id
+            ) ip ON ip.sale_id = s.id
+            WHERE s.status = 'completed'
+              AND s.created_at BETWEEN :start AND :end";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['start' => $start, 'end' => $end]);
+    return $stmt->fetch() ?: ['sales' => 0, 'profit' => 0, 'trans_count' => 0];
+}
+
+function pct_trend(float $current, float $previous): array {
+    if ($previous <= 0) {
+        return $current > 0 ? ['label' => 'New', 'dir' => 'up'] : ['label' => '—', 'dir' => 'flat'];
+    }
+    $change = (($current - $previous) / $previous) * 100;
+    if (abs($change) < 0.05) {
+        return ['label' => '0.0%', 'dir' => 'flat'];
+    }
+    $dir = $change >= 0 ? 'up' : 'down';
+    return ['label' => ($change >= 0 ? '+' : '') . number_format($change, 1) . '%', 'dir' => $dir];
+}
+
+// ---------------------------------------------------------------
+// Date ranges
+// ---------------------------------------------------------------
+$now             = new DateTime();
+$todayStart      = (clone $now)->setTime(0, 0, 0);
+$todayEnd        = (clone $now)->setTime(23, 59, 59);
+$yesterdayStart  = (clone $todayStart)->modify('-1 day');
+$yesterdayEnd    = (clone $todayEnd)->modify('-1 day');
+
+$monthStart      = (clone $now)->modify('first day of this month')->setTime(0, 0, 0);
+$dayOfMonth      = (int)$now->format('j');
+$lastMonthStart  = (clone $monthStart)->modify('-1 month');
+$lastMonthMtdEnd = (clone $lastMonthStart)->modify('+' . ($dayOfMonth - 1) . ' days')->setTime(23, 59, 59);
+
+$fmt = 'Y-m-d H:i:s';
+
+$today     = sales_summary($pdo, $todayStart->format($fmt), $todayEnd->format($fmt));
+$yesterday = sales_summary($pdo, $yesterdayStart->format($fmt), $yesterdayEnd->format($fmt));
+$month     = sales_summary($pdo, $monthStart->format($fmt), $now->format($fmt));
+$lastMonth = sales_summary($pdo, $lastMonthStart->format($fmt), $lastMonthMtdEnd->format($fmt));
+
+$todaySalesTrend  = pct_trend((float)$today['sales'], (float)$yesterday['sales']);
+$todayProfitTrend = pct_trend((float)$today['profit'], (float)$yesterday['profit']);
+$monthSalesTrend  = pct_trend((float)$month['sales'], (float)$lastMonth['sales']);
+$monthProfitTrend = pct_trend((float)$month['profit'], (float)$lastMonth['profit']);
+
 $kpis = [
-    ['icon' => 'fa-cash-register', 'label' => "Today's Sales",   'value' => '₱18,420',  'trend' => '+8.2%', 'dir' => 'up',   'card' => 'today-card'],
-    ['icon' => 'fa-sack-dollar',   'label' => "Today's Profit",   'value' => '₱6,760',   'trend' => '+5.1%', 'dir' => 'up',   'card' => 'profit-card'],
-    ['icon' => 'fa-calendar-days', 'label' => 'This Month Sales', 'value' => '₱214,300', 'trend' => '+12%',  'dir' => 'up',   'card' => 'month-card'],
-    ['icon' => 'fa-coins',         'label' => 'This Month Profit','value' => '₱78,110',  'trend' => '+9.4%', 'dir' => 'up',   'card' => 'month-profit-card'],
+    ['icon' => 'fa-cash-register', 'label' => "Today's Sales",    'value' => peso($today['sales']),    'trend' => $todaySalesTrend['label'],  'dir' => $todaySalesTrend['dir'],  'card' => 'today-card'],
+    ['icon' => 'fa-sack-dollar',   'label' => "Today's Profit",   'value' => peso($today['profit']),   'trend' => $todayProfitTrend['label'], 'dir' => $todayProfitTrend['dir'], 'card' => 'profit-card'],
+    ['icon' => 'fa-calendar-days', 'label' => 'This Month Sales', 'value' => peso($month['sales']),    'trend' => $monthSalesTrend['label'],  'dir' => $monthSalesTrend['dir'],  'card' => 'month-card'],
+    ['icon' => 'fa-coins',         'label' => 'This Month Profit','value' => peso($month['profit']),   'trend' => $monthProfitTrend['label'], 'dir' => $monthProfitTrend['dir'], 'card' => 'month-profit-card'],
 ];
 
-// Sales analytics — last 7 days, sales vs. profit
-$salesChart = [
-    'labels'  => ['Jul 11', 'Jul 12', 'Jul 13', 'Jul 14', 'Jul 15', 'Jul 16', 'Jul 17'],
-    'sales'   => [15200, 16800, 14950, 19100, 21300, 24600, 18420],
-    'profit'  => [5300,  5900,  5100,  6700,  7600,  8900,  6760],
-];
+// ---------------------------------------------------------------
+// Sales analytics — last 7 days (zero-filled for days with no sales)
+// ---------------------------------------------------------------
+$chartStart = (clone $todayStart)->modify('-6 days');
+$stmt = $pdo->prepare(
+    "SELECT DATE(s.created_at) AS d,
+            SUM(s.total) AS sales,
+            SUM(ip.profit) AS profit
+     FROM sales s
+     LEFT JOIN (
+         SELECT si.sale_id,
+                SUM((si.unit_price - COALESCE(p.cost, 0)) * si.quantity) AS profit
+         FROM sale_items si
+         LEFT JOIN products p ON p.id = si.product_id
+         GROUP BY si.sale_id
+     ) ip ON ip.sale_id = s.id
+     WHERE s.status = 'completed' AND s.created_at >= :start
+     GROUP BY DATE(s.created_at)"
+);
+$stmt->execute(['start' => $chartStart->format($fmt)]);
+$byDay = [];
+foreach ($stmt->fetchAll() as $row) {
+    $byDay[$row['d']] = $row;
+}
 
-// Product performance ranking
-$productRanking = [
-    ['rank' => 1, 'name' => 'Kimchi Ramen',        'units' => 214, 'revenue' => '₱32,100', 'dir' => 'up'],
-    ['rank' => 2, 'name' => 'Bulgogi Rice Bowl',    'units' => 178, 'revenue' => '₱26,700', 'dir' => 'up'],
-    ['rank' => 3, 'name' => 'Tteokbokki',           'units' => 156, 'revenue' => '₱18,720', 'dir' => 'down'],
-    ['rank' => 4, 'name' => 'Iced Yakult Soda',     'units' => 142, 'revenue' => '₱9,940',  'dir' => 'up'],
-    ['rank' => 5, 'name' => 'Gyoza (6pc)',          'units' => 121, 'revenue' => '₱10,890', 'dir' => 'down'],
-];
+$salesChart = ['labels' => [], 'sales' => [], 'profit' => []];
+for ($i = 6; $i >= 0; $i--) {
+    $d = (clone $todayStart)->modify("-$i days");
+    $key = $d->format('Y-m-d');
+    $salesChart['labels'][] = $d->format('M j');
+    $salesChart['sales'][]  = isset($byDay[$key]) ? round((float)$byDay[$key]['sales'], 2) : 0;
+    $salesChart['profit'][] = isset($byDay[$key]) ? round((float)$byDay[$key]['profit'], 2) : 0;
+}
 
-// Cashier / staff active status
-$cashiers = [
-    ['name' => 'Mika Santos',   'role' => 'Cashier — AM shift', 'status' => 'active',  'note' => 'On register 1'],
-    ['name' => 'Jordan Reyes',  'role' => 'Cashier — AM shift', 'status' => 'active',  'note' => 'On register 2'],
-    ['name' => 'Bea Villareal', 'role' => 'Floor staff',        'status' => 'break',   'note' => 'Back in 10 min'],
-    ['name' => 'Carlo Dizon',   'role' => 'Cashier — PM shift', 'status' => 'offline', 'note' => 'Shift starts 4:00 PM'],
-];
+// ---------------------------------------------------------------
+// Product performance ranking — top sellers by revenue (all completed
+// sales on record), with a trend arrow from the last 7 vs. prior 7 days
+// ---------------------------------------------------------------
+$stmt = $pdo->query(
+    "SELECT si.product_name AS name,
+            SUM(si.quantity) AS units,
+            SUM(si.line_total) AS revenue
+     FROM sale_items si
+     JOIN sales s ON s.id = si.sale_id
+     WHERE s.status = 'completed'
+     GROUP BY si.product_name
+     ORDER BY revenue DESC
+     LIMIT 5"
+);
+$topProducts = $stmt->fetchAll();
 
-// Low-stock products
-$lowStock = [
-    ['name' => 'Gochujang Paste 500g', 'stock' => 3,  'reorder' => 10, 'status' => 'critical'],
-    ['name' => 'Nori Sheets (pack)',   'stock' => 6,  'reorder' => 12, 'status' => 'low'],
-    ['name' => 'Rice Cake (tteok)',    'stock' => 5,  'reorder' => 15, 'status' => 'critical'],
-    ['name' => 'Yakult 5-pack',        'stock' => 9,  'reorder' => 20, 'status' => 'low'],
-    ['name' => 'Sesame Oil 1L',        'stock' => 2,  'reorder' => 8,  'status' => 'critical'],
-    ['name' => 'Disposable Chopsticks','stock' => 14, 'reorder' => 30, 'status' => 'low'],
-];
+$prior7Start = (clone $chartStart)->modify('-7 days');
+$stmt = $pdo->prepare(
+    "SELECT si.product_name AS name,
+            SUM(CASE WHEN s.created_at >= :recentStart1 THEN si.quantity ELSE 0 END) AS recent_units,
+            SUM(CASE WHEN s.created_at < :recentStart2 THEN si.quantity ELSE 0 END)  AS prior_units
+     FROM sale_items si
+     JOIN sales s ON s.id = si.sale_id
+     WHERE s.status = 'completed' AND s.created_at >= :priorStart
+     GROUP BY si.product_name"
+);
+$stmt->execute([
+    'recentStart1' => $chartStart->format($fmt),
+    'recentStart2' => $chartStart->format($fmt),
+    'priorStart'   => $prior7Start->format($fmt),
+]);
+$trendByProduct = [];
+foreach ($stmt->fetchAll() as $row) {
+    $trendByProduct[$row['name']] = $row;
+}
 
-// Today's transactions (columns match the CSV export in dashboard.js)
-$transactions = [
-    ['id' => 'TX-10482', 'time' => 'Jul 17, 2026 1:42 PM', 'items' => 'Kimchi Ramen x2, Iced Tea',   'amount' => '₱620', 'profit' => '₱210'],
-    ['id' => 'TX-10481', 'time' => 'Jul 17, 2026 1:35 PM', 'items' => 'Bulgogi Rice Bowl',            'amount' => '₱280', 'profit' => '₱95'],
-    ['id' => 'TX-10480', 'time' => 'Jul 17, 2026 1:20 PM', 'items' => 'Gyoza (6pc), Yakult Soda',     'amount' => '₱310', 'profit' => '₱118'],
-    ['id' => 'TX-10479', 'time' => 'Jul 17, 2026 1:04 PM', 'items' => 'Tteokbokki x2',                'amount' => '₱480', 'profit' => '₱150'],
-    ['id' => 'TX-10478', 'time' => 'Jul 17, 2026 12:51 PM','items' => 'Kimchi Ramen, Gyoza (6pc)',    'amount' => '₱330', 'profit' => '₱112'],
-];
+$productRanking = [];
+$rank = 1;
+foreach ($topProducts as $p) {
+    $t = $trendByProduct[$p['name']] ?? ['recent_units' => 0, 'prior_units' => 0];
+    if ($t['recent_units'] > $t['prior_units']) {
+        $dir = 'up';
+    } elseif ($t['recent_units'] < $t['prior_units']) {
+        $dir = 'down';
+    } else {
+        $dir = 'flat';
+    }
+    $productRanking[] = [
+        'rank'    => $rank++,
+        'name'    => $p['name'],
+        'units'   => (int)$p['units'],
+        'revenue' => peso($p['revenue']),
+        'dir'     => $dir,
+    ];
+}
+
+// ---------------------------------------------------------------
+// Cashier / staff active status — derived from login_audit. A user
+// whose most recent successful login was today counts as active;
+// otherwise offline. (No logout tracking exists yet, so this is a
+// best-effort signal, not a live session list.)
+// ---------------------------------------------------------------
+$stmt = $pdo->query(
+    "SELECT u.email, la.last_login
+     FROM users u
+     JOIN (
+         SELECT email, MAX(created_at) AS last_login
+         FROM login_audit
+         WHERE success = 1
+         GROUP BY email
+     ) la ON la.email = u.email
+     ORDER BY la.last_login DESC
+     LIMIT 8"
+);
+$cashiers = [];
+foreach ($stmt->fetchAll() as $row) {
+    $lastLogin = new DateTime($row['last_login']);
+    $isToday = $lastLogin->format('Y-m-d') === $now->format('Y-m-d');
+    $cashiers[] = [
+        'name'   => explode('@', $row['email'])[0],
+        'role'   => 'Staff',
+        'status' => $isToday ? 'active' : 'offline',
+        'note'   => 'Last login ' . $lastLogin->format('M j, g:i A'),
+    ];
+}
+
+// ---------------------------------------------------------------
+// Low-stock products, straight from the products table
+// ---------------------------------------------------------------
+$stmt = $pdo->query(
+    "SELECT name, stock_qty, low_stock_threshold
+     FROM products
+     WHERE is_active = 1 AND stock_qty <= low_stock_threshold
+     ORDER BY stock_qty ASC"
+);
+$lowStock = [];
+foreach ($stmt->fetchAll() as $row) {
+    $critical = $row['stock_qty'] <= max(1, (int)round($row['low_stock_threshold'] / 2));
+    $lowStock[] = [
+        'name'    => $row['name'],
+        'stock'   => (int)$row['stock_qty'],
+        'reorder' => (int)$row['low_stock_threshold'],
+        'status'  => $critical ? 'critical' : 'low',
+    ];
+}
+
+// ---------------------------------------------------------------
+// Today's transactions
+// ---------------------------------------------------------------
+$stmt = $pdo->prepare(
+    "SELECT s.receipt_no,
+            s.created_at,
+            s.total,
+            GROUP_CONCAT(CONCAT(si.product_name, ' x', si.quantity) SEPARATOR ', ') AS items,
+            SUM((si.unit_price - COALESCE(p.cost, 0)) * si.quantity) AS profit
+     FROM sales s
+     JOIN sale_items si ON si.sale_id = s.id
+     LEFT JOIN products p ON p.id = si.product_id
+     WHERE s.created_at BETWEEN :start AND :end AND s.status = 'completed'
+     GROUP BY s.id
+     ORDER BY s.created_at DESC"
+);
+$stmt->execute(['start' => $todayStart->format($fmt), 'end' => $todayEnd->format($fmt)]);
+$transactions = [];
+foreach ($stmt->fetchAll() as $row) {
+    $transactions[] = [
+        'id'      => $row['receipt_no'],
+        'time'    => (new DateTime($row['created_at']))->format('M j, Y g:i A'),
+        'items'   => $row['items'],
+        'amount'  => peso($row['total']),
+        'profit'  => peso($row['profit']),
+    ];
+}
 
 $modules = [
-    ['code' => 'M1', 'icon' => 'fa-cash-register',  'title' => 'Point of Sale & Transactions',      'href' => 'pos.php'],
-    ['code' => 'M2', 'icon' => 'fa-dolly',          'title' => 'Purchase Request Management',       'href' => 'purchase-requests.php'],
-    ['code' => 'M3', 'icon' => 'fa-bowl-food',      'title' => 'Customer Order & Reservation',      'href' => 'orders.php'],
-    ['code' => 'M4', 'icon' => 'fa-chart-line',     'title' => 'Sales & Profitability Analytics',   'href' => 'analytics.php'],
-    ['code' => 'M5', 'icon' => 'fa-tags',           'title' => 'Promotions & Campaign Manager',     'href' => 'promotions.php'],
-    ['code' => 'M6', 'icon' => 'fa-user-shield',    'title' => 'Audit, Compliance & User Access',   'href' => 'login_audit.php'],
+    ['icon' => 'fa-cash-register', 'title' => 'Point of Sale & Transactions',    'href' => 'pos.php'],
+    ['icon' => 'fa-dolly',         'title' => 'Purchase Request Management',     'href' => 'purchase-requests.php'],
+    ['icon' => 'fa-bowl-food',     'title' => 'Customer Order & Reservation',    'href' => 'orders.php'],
+    ['icon' => 'fa-chart-line',    'title' => 'Sales & Profitability Analytics', 'href' => 'analytics.php'],
+    ['icon' => 'fa-tags',          'title' => 'Promotions & Campaign Manager',   'href' => 'promotions.php'],
+    ['icon' => 'fa-user-shield',   'title' => 'Audit, Compliance & User Access', 'href' => 'login_audit.php'],
 ];
 ?>
 <!DOCTYPE html>
@@ -91,25 +281,7 @@ $modules = [
 <body>
 <div class="app-shell">
 
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <img src="assets/logo.png" alt="RAM-YUM Logo">
-            <div class="brand-text">
-                <strong>RAM-YUM</strong>
-                <span>Store Management</span>
-            </div>
-        </div>
-        <ul class="sidebar-nav">
-            <li class="active"><a href="dashboard.php"><i class="fa-solid fa-gauge-high"></i> Overview</a></li>
-            <li><a href="pos.php"><i class="fa-solid fa-cash-register"></i> Point of Sale</a></li>
-            <li><a href="purchase-requests.php"><i class="fa-solid fa-dolly"></i> Purchase Requests</a></li>
-            <li><a href="orders.php"><i class="fa-solid fa-bowl-food"></i> Orders &amp; Reservations</a></li>
-            <li><a href="analytics.php"><i class="fa-solid fa-chart-line"></i> Sales Analytics</a></li>
-            <li><a href="promotions.php"><i class="fa-solid fa-tags"></i> Promotions</a></li>
-            <li><a href="login_audit.php"><i class="fa-solid fa-user-shield"></i> Audit &amp; Access</a></li>
-        </ul>
-        <div class="sidebar-foot">Logged in as<br><strong style="color:var(--ram-yellow)"><?= htmlspecialchars($userEmail) ?></strong></div>
-    </aside>
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <div class="main-area">
         <header class="topbar">
@@ -163,11 +335,13 @@ $modules = [
                     <h3><i class="fa-solid fa-chart-line"></i> Sales &amp; profit — last 7 days</h3>
                     <div class="chart-legend">
                         <span><i class="dot dot-sales"></i> Sales</span>
-                        <span><i class="dot dot-profit"></i> Profit</span>
+                        <span><i class="dot dot-profit"></i> Profit (dashed)</span>
                     </div>
                 </div>
                 <div class="chart-wrap">
-                    <canvas id="salesChart" height="90"></canvas>
+                    <canvas id="salesChart" role="img"
+                        aria-label="Line chart of daily sales and profit for the last 7 days, from <?= htmlspecialchars($salesChart['labels'][0]) ?> to <?= htmlspecialchars($salesChart['labels'][6]) ?>"
+                    ><?php foreach ($salesChart['labels'] as $i => $lbl): ?><?= htmlspecialchars($lbl) ?>: <?= peso($salesChart['sales'][$i]) ?> sales, <?= peso($salesChart['profit'][$i]) ?> profit. <?php endforeach; ?></canvas>
                 </div>
             </div>
 
@@ -176,6 +350,9 @@ $modules = [
                     <div class="panel-head">
                         <h3><i class="fa-solid fa-ranking-star"></i> Product performance ranking</h3>
                     </div>
+                    <?php if (empty($productRanking)): ?>
+                        <p class="empty-note">No completed sales on record yet.</p>
+                    <?php else: ?>
                     <table class="ranking-table">
                         <thead>
                             <tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th><th></th></tr>
@@ -189,17 +366,29 @@ $modules = [
                                 <td><?= htmlspecialchars($p['name']) ?></td>
                                 <td><?= (int)$p['units'] ?></td>
                                 <td><?= htmlspecialchars($p['revenue']) ?></td>
-                                <td><i class="fa-solid <?= $p['dir'] === 'up' ? 'fa-arrow-trend-up trend-up' : 'fa-arrow-trend-down trend-down' ?>"></i></td>
+                                <td>
+                                    <?php if ($p['dir'] === 'up'): ?>
+                                        <i class="fa-solid fa-arrow-trend-up trend-up"></i>
+                                    <?php elseif ($p['dir'] === 'down'): ?>
+                                        <i class="fa-solid fa-arrow-trend-down trend-down"></i>
+                                    <?php else: ?>
+                                        <i class="fa-solid fa-minus trend-flat"></i>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <?php endif; ?>
                 </div>
 
                 <div class="panel">
                     <div class="panel-head">
                         <h3><i class="fa-solid fa-user-clock"></i> Cashier active status</h3>
                     </div>
+                    <?php if (empty($cashiers)): ?>
+                        <p class="empty-note">No staff logins recorded yet.</p>
+                    <?php else: ?>
                     <ul class="cashier-list">
                         <?php foreach ($cashiers as $c): ?>
                         <li>
@@ -216,12 +405,16 @@ $modules = [
                         </li>
                         <?php endforeach; ?>
                     </ul>
+                    <?php endif; ?>
                 </div>
 
                 <div class="panel">
                     <div class="panel-head">
                         <h3><i class="fa-solid fa-box-open"></i> Low-stock products</h3>
                     </div>
+                    <?php if (empty($lowStock)): ?>
+                        <p class="empty-note">Nothing below its reorder threshold right now.</p>
+                    <?php else: ?>
                     <table class="low-stock-table">
                         <thead>
                             <tr><th>Product</th><th>Stock</th><th>Reorder at</th><th>Status</th></tr>
@@ -237,6 +430,7 @@ $modules = [
                         <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -287,12 +481,8 @@ $modules = [
 <script>
 window.SALES_CHART_DATA = <?= json_encode($salesChart, JSON_UNESCAPED_UNICODE) ?>;
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="dashboard.js"></script>
-<script>
-document.getElementById('menuToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-});
-</script>
+<script src="sidebar.js"></script>
 </body>
 </html>

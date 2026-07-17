@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/promotion_engine.php';
 
 function respond(int $status, array $body): void {
     http_response_code($status);
@@ -23,6 +24,13 @@ $amountReceived = (float) ($input['amount_received'] ?? 0);
 $paymentMethod = in_array($input['payment_method'] ?? '', ['cash', 'gcash', 'card'], true)
     ? $input['payment_method']
     : 'cash';
+// Cashier can choose to skip an active storewide promo (e.g. it doesn't
+// apply to this customer/order), but this can never turn a discount ON
+// that isn't actually live - see the lookups below. Auto-clearance
+// promotions (near-expiration, slow-selling, etc.) are never optional -
+// they always apply when a product qualifies, same as a marked-down price
+// tag would in a physical store.
+$applyStorewidePromo = filter_var($input['apply_promo'] ?? true, FILTER_VALIDATE_BOOLEAN);
 
 if (!is_array($cart) || count($cart) === 0) {
     respond(400, ['ok' => false, 'message' => 'Cart is empty.']);
@@ -63,9 +71,15 @@ try {
         $productsById[(int) $p['id']] = $p;
     }
 
+    // Storewide promo (optional, cashier-toggleable) - resolved here, not
+    // trusted from the client, same as before.
+    $storewidePromo = $applyStorewidePromo ? active_storewide_promotion($db) : null;
+
     $subtotal = 0.0;
+    $totalDiscount = 0.0;
     $itemCount = 0;
     $lines = [];
+    $promoNamesUsed = [];
 
     foreach ($requested as $pid => $qty) {
         if (!isset($productsById[$pid])) {
@@ -78,21 +92,71 @@ try {
             respond(409, ['ok' => false, 'message' => "Not enough stock for \"{$p['name']}\" (only {$p['stock_qty']} left)."]);
         }
         $unitPrice = (float) $p['price'];
-        $lineTotal = round($unitPrice * $qty, 2);
-        $subtotal += $lineTotal;
+        $lineSubtotal = round($unitPrice * $qty, 2);
+
+        // Resolve the discount for this specific line: a per-product
+        // clearance promotion (near-expiration, slow-selling, out-of-season,
+        // replaced-model) always wins if it beats the storewide sale;
+        // these never stack, the customer gets whichever markdown is bigger.
+        $productPromo = best_product_promotion($db, $pid);
+        $candidatePct = 0.0;
+        $candidateId = null;
+        $candidateName = null;
+        if ($productPromo && (float) $productPromo['discount_percent'] > $candidatePct) {
+            $candidatePct = (float) $productPromo['discount_percent'];
+            $candidateId = (int) $productPromo['id'];
+            $candidateName = $productPromo['name'];
+        }
+        if ($storewidePromo && (float) $storewidePromo['discount_percent'] > $candidatePct) {
+            $candidatePct = (float) $storewidePromo['discount_percent'];
+            $candidateId = (int) $storewidePromo['id'];
+            $candidateName = $storewidePromo['name'];
+        }
+
+        $lineDiscount = $candidatePct > 0 ? round($lineSubtotal * ($candidatePct / 100), 2) : 0.00;
+        $lineTotal = round($lineSubtotal - $lineDiscount, 2);
+
+        $subtotal += $lineSubtotal;
+        $totalDiscount += $lineDiscount;
         $itemCount += $qty;
+        if ($candidateName) {
+            $promoNamesUsed[$candidateName] = true;
+        }
+
         $lines[] = [
             'product_id' => $pid,
             'name' => $p['name'],
             'unit_price' => $unitPrice,
             'quantity' => $qty,
+            'discount_amount' => $lineDiscount,
             'line_total' => $lineTotal,
+            'promotion_id' => $candidateId,
+            'promotion_name' => $candidateName,
+            'remaining_stock' => (int) $p['stock_qty'] - $qty,
         ];
     }
 
     $subtotal = round($subtotal, 2);
-    $discount = 0.00;
+    $discount = round($totalDiscount, 2);
     $total = round($subtotal - $discount, 2);
+
+    // Sale-level promotion label: if every discounted line shared the same
+    // promotion, show that name on the receipt; if different clearance
+    // reasons applied to different lines, say so rather than picking one
+    // arbitrarily. sale_items still has the accurate per-line record either way.
+    $promotionId = null;
+    $promotionName = null;
+    if (count($promoNamesUsed) === 1) {
+        $promotionName = array_key_first($promoNamesUsed);
+        foreach ($lines as $l) {
+            if ($l['promotion_name'] === $promotionName) {
+                $promotionId = $l['promotion_id'];
+                break;
+            }
+        }
+    } elseif (count($promoNamesUsed) > 1) {
+        $promotionName = 'Multiple promotions';
+    }
 
     if ($paymentMethod !== 'cash') {
         // Non-cash tenders settle exactly; no change is generated.
@@ -107,8 +171,8 @@ try {
     $changeDue = round($amountReceived - $total, 2);
 
     $insertSale = $db->prepare(
-        'INSERT INTO sales (receipt_no, cashier_id, cashier_email, subtotal, discount, total, amount_received, change_due, payment_method, item_count, status)
-         VALUES (:receipt_no, :cashier_id, :cashier_email, :subtotal, :discount, :total, :amount_received, :change_due, :payment_method, :item_count, "completed")'
+        'INSERT INTO sales (receipt_no, cashier_id, cashier_email, subtotal, discount, promotion_id, promotion_name, total, amount_received, change_due, payment_method, item_count, status)
+         VALUES (:receipt_no, :cashier_id, :cashier_email, :subtotal, :discount, :promotion_id, :promotion_name, :total, :amount_received, :change_due, :payment_method, :item_count, "completed")'
     );
     // Placeholder receipt number first, patched with the real sale id right after insert.
     $insertSale->execute([
@@ -117,6 +181,8 @@ try {
         ':cashier_email' => $_SESSION['user_email'],
         ':subtotal' => $subtotal,
         ':discount' => $discount,
+        ':promotion_id' => $promotionId,
+        ':promotion_name' => $promotionName,
         ':total' => $total,
         ':amount_received' => $amountReceived,
         ':change_due' => $changeDue,
@@ -131,8 +197,8 @@ try {
        ->execute([':r' => $receiptNo, ':id' => $saleId]);
 
     $insertItem = $db->prepare(
-        'INSERT INTO sale_items (sale_id, product_id, product_name, unit_price, quantity, line_total)
-         VALUES (:sale_id, :product_id, :product_name, :unit_price, :quantity, :line_total)'
+        'INSERT INTO sale_items (sale_id, product_id, promotion_id, product_name, unit_price, promotion_name, quantity, discount_amount, line_total)
+         VALUES (:sale_id, :product_id, :promotion_id, :product_name, :unit_price, :promotion_name, :quantity, :discount_amount, :line_total)'
     );
     $updateStock = $db->prepare('UPDATE products SET stock_qty = stock_qty - :qty WHERE id = :id');
     $insertMovement = $db->prepare(
@@ -144,9 +210,12 @@ try {
         $insertItem->execute([
             ':sale_id' => $saleId,
             ':product_id' => $line['product_id'],
+            ':promotion_id' => $line['promotion_id'],
             ':product_name' => $line['name'],
             ':unit_price' => $line['unit_price'],
+            ':promotion_name' => $line['promotion_name'],
             ':quantity' => $line['quantity'],
+            ':discount_amount' => $line['discount_amount'],
             ':line_total' => $line['line_total'],
         ]);
         $updateStock->execute([':qty' => $line['quantity'], ':id' => $line['product_id']]);
@@ -168,6 +237,7 @@ try {
             'items' => $lines,
             'subtotal' => $subtotal,
             'discount' => $discount,
+            'promotion_name' => $promotionName,
             'total' => $total,
             'amount_received' => $amountReceived,
             'change_due' => $changeDue,
