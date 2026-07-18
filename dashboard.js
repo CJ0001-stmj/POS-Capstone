@@ -1,3 +1,50 @@
+// Clickable cards/panels — click or Enter/Space jumps to data-href page
+document.querySelectorAll('.clickable-card').forEach((card) => {
+    const go = () => {
+        const href = card.dataset.href;
+        if (href) window.location.href = href;
+    };
+    card.addEventListener('click', go);
+    card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            go();
+        }
+    });
+});
+
+// Notification bell — open/close dropdown, switch between concern /
+// time-in-out / top-products tabs
+function initNotifBell() {
+    const bell = document.getElementById('notifBell');
+    const dropdown = document.getElementById('notifDropdown');
+    if (!bell || !dropdown) return;
+
+    bell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.toggle('open');
+        bell.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && e.target !== bell) {
+            dropdown.classList.remove('open');
+            bell.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    document.querySelectorAll('.notif-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.notif-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            document.querySelectorAll('.notif-pane').forEach((pane) => {
+                pane.style.display = pane.dataset.pane === target ? '' : 'none';
+            });
+        });
+    });
+}
+
 // Update current date and time
 function updateDateTime() {
     const now = new Date();
@@ -106,6 +153,7 @@ function renderSalesChart() {
 document.addEventListener('DOMContentLoaded', () => {
     updateDateTime();
     renderSalesChart();
+    initNotifBell();
     
     // Update margin for today
     const todaySales = parseFloat(

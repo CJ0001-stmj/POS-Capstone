@@ -20,6 +20,7 @@ CREATE TABLE `users` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(255) NOT NULL,
   `password_hash` VARCHAR(255) NOT NULL,
+  `role` ENUM('admin', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   `failed_attempts` INT(11) NOT NULL DEFAULT 0,
   `locked_until` DATETIME NULL DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -28,7 +29,16 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Table: login_audit
+-- Seed accounts — CHANGE THESE PASSWORDS after first login.
+-- Hashes below made with bcrypt, cost 10 (same algo PHP password_hash()
+-- uses) — password_verify() in login.php reads em fine.
+--
+--   cj@gmail.con  / cj123   (admin)   <-- heads up, ".con" not ".com", fix if typo
+--   cj2@gmail.com / cj456   (cashier)
+-- --------------------------------------------------------
+INSERT INTO `users` (`email`, `password_hash`, `role`) VALUES
+('cj@gmail.com',  '$2b$10$hk.8sWnqskzHmy0GQiuhHuXIeIOk2MSBaMi.2Py4itLd16VJi/b0i', 'admin'),
+('cj2@gmail.com', '$2b$10$iGmx8ypqPQOYsal/1Auqae4MM1v8U318shgdSGhja1q8YFnqu5jkK', 'cashier');
 -- One row per login attempt (success or failure). Append-only -
 -- the API never updates or deletes rows here. Passwords are never
 -- written to this table, only the outcome.
@@ -53,5 +63,23 @@ CREATE TABLE `login_audit` (
   KEY `idx_email_created` (`email`, `created_at`),
   KEY `idx_success_created` (`success`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- Already have a `mms` DB with data you don't want to drop? Run this
+-- instead of the DROP/CREATE `users` block above:
+--
+--   ALTER TABLE `users`
+--     ADD COLUMN `role` ENUM('admin','manager','cashier') NOT NULL DEFAULT 'cashier'
+--     AFTER `password_hash`;
+--   UPDATE `users` SET `role` = 'cashier'; -- then hand-set admins/managers
+--
+-- Shift sales on the cashier dashboard (dashboard.php) filter `sales` by
+-- `cashier_id`. If your `sales` table uses a different column name for
+-- "which staff member rang this up" (e.g. `user_id`), update the query
+-- in dashboard.php to match, or add the column:
+--
+--   ALTER TABLE `sales` ADD COLUMN `cashier_id` INT(11) NULL AFTER `id`,
+--     ADD CONSTRAINT `fk_sales_cashier` FOREIGN KEY (`cashier_id`) REFERENCES `users`(`id`);
+-- --------------------------------------------------------
 
 COMMIT;

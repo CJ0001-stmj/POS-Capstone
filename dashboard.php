@@ -9,7 +9,8 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['user_email'])) {
 }
 
 $userEmail = $_SESSION['user_email'];
-$initials = strtoupper(substr($userEmail, 0, 1));
+$userRole  = $_SESSION['user_role'] ?? 'cashier';
+$initials  = strtoupper(substr($userEmail, 0, 1));
 
 $pdo = get_db_connection();
 
@@ -19,6 +20,17 @@ $pdo = get_db_connection();
 
 function peso($n): string {
     return '₱' . number_format((float)$n, 0);
+}
+
+// ---------------------------------------------------------------
+// Cashiers get a stripped-down shift dashboard instead of the full
+// store-analytics view below: time in, role, live shift sales, and
+// only the modules they use (POS, Purchase Requests, Orders). Renders
+// and exits here so none of the manager/admin-only queries below run.
+// ---------------------------------------------------------------
+if ($userRole === 'cashier') {
+    require __DIR__ . '/dashboard-cashier.php';
+    exit;
 }
 
 /**
@@ -188,7 +200,7 @@ foreach ($topProducts as $p) {
 // best-effort signal, not a live session list.)
 // ---------------------------------------------------------------
 $stmt = $pdo->query(
-    "SELECT u.email, la.last_login
+    "SELECT u.email, u.role, la.last_login
      FROM users u
      JOIN (
          SELECT email, MAX(created_at) AS last_login
@@ -205,7 +217,7 @@ foreach ($stmt->fetchAll() as $row) {
     $isToday = $lastLogin->format('Y-m-d') === $now->format('Y-m-d');
     $cashiers[] = [
         'name'   => explode('@', $row['email'])[0],
-        'role'   => 'Staff',
+        'role'   => ucfirst($row['role']),
         'status' => $isToday ? 'active' : 'offline',
         'note'   => 'Last login ' . $lastLogin->format('M j, g:i A'),
     ];
@@ -259,6 +271,26 @@ foreach ($stmt->fetchAll() as $row) {
     ];
 }
 
+// ---------------------------------------------------------------
+// Notification bell — three feeds: open staff concerns, staff time
+// in/out (from login_audit, same signal as "Cashier active status"),
+// and top-selling products (reuses $productRanking above).
+// ---------------------------------------------------------------
+$stmt = $pdo->prepare(
+    "SELECT subject, submitted_by_email, status, created_at
+     FROM staff_concerns
+     WHERE status IN ('open', 'in_review')
+     ORDER BY FIELD(status, 'open', 'in_review'), created_at DESC
+     LIMIT 5"
+);
+$stmt->execute();
+$notifConcerns = $stmt->fetchAll();
+$openConcernCount = (int)$pdo->query("SELECT COUNT(*) c FROM staff_concerns WHERE status = 'open'")->fetch()['c'];
+
+$notifTimeInOut  = array_slice($cashiers, 0, 5);
+$notifTopProducts = array_slice($productRanking, 0, 5);
+$notifBadgeCount  = $openConcernCount;
+
 $modules = [
     ['icon' => 'fa-cash-register', 'title' => 'Point of Sale & Transactions',    'href' => 'pos.php'],
     ['icon' => 'fa-dolly',         'title' => 'Purchase Request Management',     'href' => 'purchase-requests.php'],
@@ -295,7 +327,65 @@ $modules = [
                 </div>
             </div>
             <div class="topbar-actions">
-                <button class="icon-btn" aria-label="Notifications"><i class="fa-solid fa-bell"></i></button>
+                <div class="notif-wrap">
+                    <button class="icon-btn" id="notifBell" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                        <i class="fa-solid fa-bell"></i>
+                        <?php if ($notifBadgeCount > 0): ?>
+                            <span class="notif-badge" id="notifBadge"><?= $notifBadgeCount > 9 ? '9+' : (int)$notifBadgeCount ?></span>
+                        <?php endif; ?>
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-dropdown-head">
+                            <strong>Notifications</strong>
+                        </div>
+                        <div class="notif-tabs" id="notifTabs">
+                            <button class="notif-tab active" data-tab="concerns">
+                                <i class="fa-solid fa-inbox"></i> Concerns
+                                <?php if ($openConcernCount > 0): ?><span class="notif-tab-count"><?= (int)$openConcernCount ?></span><?php endif; ?>
+                            </button>
+                            <button class="notif-tab" data-tab="timeinout"><i class="fa-solid fa-user-clock"></i> Time In/Out</button>
+                            <button class="notif-tab" data-tab="topproducts"><i class="fa-solid fa-ranking-star"></i> Top Products</button>
+                        </div>
+
+                        <div class="notif-list notif-pane" data-pane="concerns">
+                            <?php if (empty($notifConcerns)): ?>
+                                <p class="notif-empty">No open concerns.</p>
+                            <?php else: foreach ($notifConcerns as $nc): ?>
+                                <div class="notif-item <?= $nc['status'] === 'open' ? 'notif-item-unread' : '' ?>">
+                                    <p><?= htmlspecialchars($nc['subject']) ?></p>
+                                    <span>From <?= htmlspecialchars(explode('@', $nc['submitted_by_email'])[0]) ?> &middot; <?= htmlspecialchars((new DateTime($nc['created_at']))->format('M j, g:i A')) ?> &middot; <?= $nc['status'] === 'open' ? 'Open' : 'In review' ?></span>
+                                </div>
+                            <?php endforeach; endif; ?>
+                            <a href="staff-inbox.php" class="notif-view-all">View all in Inbox <i class="fa-solid fa-arrow-right"></i></a>
+                        </div>
+
+                        <div class="notif-list notif-pane" data-pane="timeinout" style="display:none;">
+                            <?php if (empty($notifTimeInOut)): ?>
+                                <p class="notif-empty">No staff logins recorded yet.</p>
+                            <?php else: foreach ($notifTimeInOut as $ti): ?>
+                                <div class="notif-item">
+                                    <p><?= htmlspecialchars(ucfirst($ti['name'])) ?>
+                                        <span class="status-dot status-<?= $ti['status'] ?>" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px;"></span>
+                                    </p>
+                                    <span><?= htmlspecialchars($ti['role']) ?> &middot; <?= $ti['status'] === 'active' ? 'Timed in' : 'Timed out' ?> &middot; <?= htmlspecialchars($ti['note']) ?></span>
+                                </div>
+                            <?php endforeach; endif; ?>
+                            <a href="user-access-control.php" class="notif-view-all">View all in User Access <i class="fa-solid fa-arrow-right"></i></a>
+                        </div>
+
+                        <div class="notif-list notif-pane" data-pane="topproducts" style="display:none;">
+                            <?php if (empty($notifTopProducts)): ?>
+                                <p class="notif-empty">No completed sales on record yet.</p>
+                            <?php else: foreach ($notifTopProducts as $tp): ?>
+                                <div class="notif-item">
+                                    <p>#<?= (int)$tp['rank'] ?> <?= htmlspecialchars($tp['name']) ?></p>
+                                    <span><?= (int)$tp['units'] ?> units sold &middot; <?= htmlspecialchars($tp['revenue']) ?> revenue</span>
+                                </div>
+                            <?php endforeach; endif; ?>
+                            <a href="analytics.php" class="notif-view-all">View all in Analytics <i class="fa-solid fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
                 <div class="user-chip">
                     <div class="avatar"><?= htmlspecialchars($initials) ?></div>
                     <div class="who">
@@ -311,7 +401,7 @@ $modules = [
             <p class="section-label">Today at a glance</p>
             <div class="kpi-strip">
                 <?php foreach ($kpis as $k): ?>
-                <div class="kpi-card stat-card <?= $k['card'] ?>">
+                <div class="kpi-card stat-card clickable-card <?= $k['card'] ?>" data-href="analytics.php" tabindex="0" role="link" aria-label="<?= htmlspecialchars($k['label']) ?> — go to Sales Analytics">
                     <div class="kpi-top">
                         <div class="kpi-icon"><i class="fa-solid <?= $k['icon'] ?>"></i></div>
                         <span class="kpi-trend <?= $k['dir'] ?>"><?= htmlspecialchars($k['trend']) ?></span>
@@ -346,7 +436,7 @@ $modules = [
             </div>
 
             <div class="panel-row">
-                <div class="panel">
+                <div class="panel clickable-card" data-href="analytics.php" tabindex="0" role="link" aria-label="Product performance ranking — go to Sales Analytics">
                     <div class="panel-head">
                         <h3><i class="fa-solid fa-ranking-star"></i> Product performance ranking</h3>
                     </div>
@@ -382,7 +472,7 @@ $modules = [
                     <?php endif; ?>
                 </div>
 
-                <div class="panel">
+                <div class="panel clickable-card" data-href="login_audit.php" tabindex="0" role="link" aria-label="Cashier active status — go to Audit &amp; Access">
                     <div class="panel-head">
                         <h3><i class="fa-solid fa-user-clock"></i> Cashier active status</h3>
                     </div>

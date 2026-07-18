@@ -1,0 +1,57 @@
+/* ============ Orders & Reservations — extends pos.css ============ */
+
+.type-toggle {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px 0;
+}
+.type-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 2px solid rgba(117,11,29,0.2);
+    background: #fff;
+    color: var(--ram-red);
+    font-weight: 800;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+.type-btn:hover { border-color: var(--ram-red); }
+.type-btn.active {
+    background: var(--ram-red);
+    border-color: var(--ram-red);
+    color: var(--ram-yellow);
+}
+
+.type-help {
+    margin: 8px 16px 0;
+    font-size: 0.74rem;
+    color: var(--ram-muted);
+    line-height: 1.4;
+}
+
+.reservation-fields {
+    padding: 4px 16px 2px;
+}
+.reservation-fields .pos-input { margin-bottom: 4px; }
+
+.confirm-reservation-summary {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--ram-bg);
+    border: 1px dashed rgba(117,11,29,0.25);
+    font-size: 0.82rem;
+    color: var(--ram-ink);
+}
+.confirm-reservation-summary .r-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+}
+.confirm-reservation-summary .r-row strong { color: var(--ram-red); }

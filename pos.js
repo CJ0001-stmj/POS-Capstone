@@ -1,3 +1,51 @@
+// ============== BARCODE SCANNER INTEGRATION ==============
+onScan.attachTo(document, {
+    suffixKeyCodes: [13],     // Enter key ends the scan
+    minLength: 3,             // Minimum barcode length
+    scanButtonKeyCode: false,
+    timeBeforeScan: 80,       // Adjust if scanner is too fast/slow
+
+    onScan: function(barcode, qty) {
+        console.log("Scanned:", barcode);
+        
+        // Find product by SKU or ID (your PRODUCTS array from PHP)
+        const product = PRODUCTS.find(p => 
+            p.sku === barcode || 
+            String(p.id) === barcode
+        );
+
+        if (product) {
+            addToCart(product.id, 1);
+            
+            // Optional visual feedback
+            showScanToast(product.name);
+        } else {
+            // Not found - show warning
+            showScanToast("Product not found: " + barcode, true);
+        }
+    },
+
+    onError: function(error) {
+        console.warn("Scanner error:", error);
+    }
+});
+
+// Simple toast notification
+function showScanToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 9999;
+        padding: 12px 20px; border-radius: 8px; font-weight: 700;
+        background: ${isError ? '#b3261e' : 'var(--ram-red)'};
+        color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 2500);
+}
+
+
 // ============ RAM-YUM POS ============
 // Depends on:
 //   window.RAMYUM_PRODUCTS  (injected by pos.php - source of truth for price/stock)
@@ -467,6 +515,39 @@ document.getElementById('downloadReceiptBtn').addEventListener('click', () => {
 document.getElementById('newSaleBtn').addEventListener('click', () => {
     receiptOverlay.classList.remove('show');
 });
+
+// ---------- consume a cart handed off from Orders & Reservations ----------
+(function consumeHandoff() {
+    const HANDOFF_KEY = 'ramyum_pos_handoff';
+    const raw = sessionStorage.getItem(HANDOFF_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(HANDOFF_KEY);
+    try {
+        const payload = JSON.parse(raw);
+        (payload.items || []).forEach(item => {
+            const product = PRODUCTS_BY_ID.get(Number(item.product_id));
+            if (!product) return;
+            const qty = Math.min(Number(item.quantity) || 0, Number(product.stock_qty));
+            if (qty <= 0) return;
+            cart.set(Number(product.id), {
+                id: Number(product.id),
+                name: product.name,
+                sku: product.sku,
+                price: Number(product.price),
+                stock_qty: Number(product.stock_qty),
+                qty,
+            });
+        });
+        if (applyPromoToggleEl && typeof payload.apply_promo === 'boolean') {
+            applyPromoToggleEl.checked = payload.apply_promo;
+        }
+        if (cart.size > 0) {
+            showScanToast('Order loaded from Orders & Reservations');
+        }
+    } catch (e) {
+        console.warn('Could not load handed-off order:', e);
+    }
+})();
 
 // ---------- initial paint ----------
 renderCart();

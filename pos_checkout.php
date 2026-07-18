@@ -32,6 +32,12 @@ $paymentMethod = in_array($input['payment_method'] ?? '', ['cash', 'gcash', 'car
 // tag would in a physical store.
 $applyStorewidePromo = filter_var($input['apply_promo'] ?? true, FILTER_VALIDATE_BOOLEAN);
 
+// If this checkout is fulfilling a reservation (cashier clicked "Process"
+// on a held reservation), the stock for these lines was already deducted
+// when the reservation was created — we must NOT deduct it again here.
+// We still create a normal sale/receipt so the cashier collects payment.
+$reservationId = isset($input['reservation_id']) ? (int) $input['reservation_id'] : null;
+
 if (!is_array($cart) || count($cart) === 0) {
     respond(400, ['ok' => false, 'message' => 'Cart is empty.']);
 }
@@ -55,6 +61,23 @@ $db = get_db_connection();
 
 try {
     $db->beginTransaction();
+
+    // If fulfilling a reservation, lock it now and make sure it's still
+    // sitting there waiting (not already fulfilled/cancelled by someone
+    // else in the meantime).
+    if ($reservationId) {
+        $stmt = $db->prepare('SELECT id, status FROM reservations WHERE id = :id FOR UPDATE');
+        $stmt->execute([':id' => $reservationId]);
+        $reservation = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$reservation) {
+            $db->rollBack();
+            respond(404, ['ok' => false, 'message' => 'Reservation not found.']);
+        }
+        if ($reservation['status'] !== 'reserved') {
+            $db->rollBack();
+            respond(409, ['ok' => false, 'message' => 'This reservation was already ' . $reservation['status'] . '.']);
+        }
+    }
 
     // Lock and re-fetch the real rows so price/stock can never be spoofed
     // by the client, and two cashiers can't oversell the same last unit.
@@ -87,7 +110,7 @@ try {
             respond(400, ['ok' => false, 'message' => "One of the items is no longer available."]);
         }
         $p = $productsById[$pid];
-        if ($qty > (int) $p['stock_qty']) {
+        if (!$reservationId && $qty > (int) $p['stock_qty']) {
             $db->rollBack();
             respond(409, ['ok' => false, 'message' => "Not enough stock for \"{$p['name']}\" (only {$p['stock_qty']} left)."]);
         }
@@ -132,7 +155,7 @@ try {
             'line_total' => $lineTotal,
             'promotion_id' => $candidateId,
             'promotion_name' => $candidateName,
-            'remaining_stock' => (int) $p['stock_qty'] - $qty,
+            'remaining_stock' => $reservationId ? (int) $p['stock_qty'] : (int) $p['stock_qty'] - $qty,
         ];
     }
 
@@ -218,12 +241,30 @@ try {
             ':discount_amount' => $line['discount_amount'],
             ':line_total' => $line['line_total'],
         ]);
-        $updateStock->execute([':qty' => $line['quantity'], ':id' => $line['product_id']]);
-        $insertMovement->execute([
-            ':product_id' => $line['product_id'],
-            ':change_qty' => -$line['quantity'],
-            ':reference_id' => $saleId,
-        ]);
+        if (!$reservationId) {
+            $updateStock->execute([':qty' => $line['quantity'], ':id' => $line['product_id']]);
+            $insertMovement->execute([
+                ':product_id' => $line['product_id'],
+                ':change_qty' => -$line['quantity'],
+                ':reference_id' => $saleId,
+            ]);
+        }
+    }
+
+    // Fulfilling a reservation: mark it settled and link it to the sale
+    // that just got created, so receipt-history/order-history can trace
+    // back to it. Guard the WHERE on status so a double-submit can't
+    // fulfill the same reservation twice.
+    if ($reservationId) {
+        $fulfilled = $db->prepare(
+            "UPDATE reservations SET status = 'fulfilled', fulfilled_at = NOW(), fulfilled_sale_id = :sale_id
+             WHERE id = :id AND status = 'reserved'"
+        );
+        $fulfilled->execute([':sale_id' => $saleId, ':id' => $reservationId]);
+        if ($fulfilled->rowCount() !== 1) {
+            $db->rollBack();
+            respond(409, ['ok' => false, 'message' => 'This reservation was already processed elsewhere.']);
+        }
     }
 
     $db->commit();

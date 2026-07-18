@@ -146,7 +146,10 @@ $currentParams = ['range' => $range, 'search' => $search, 'product' => $productI
 <body>
 <div class="app-shell">
 
-    <?php include __DIR__ . '/sidebar.php'; ?>
+    <?php
+    $__sidebarFile = (($_SESSION['user_role'] ?? '') === 'cashier') ? 'sidebar-cashier.php' : 'sidebar.php';
+    include __DIR__ . '/' . $__sidebarFile;
+    ?>
 
     <div class="main-area">
         <header class="topbar">
@@ -160,7 +163,7 @@ $currentParams = ['range' => $range, 'search' => $search, 'product' => $productI
                 </div>
             </div>
             <div class="topbar-actions">
-                <button class="icon-btn" aria-label="Notifications"><i class="fa-solid fa-bell"></i></button>
+                <?php if (($_SESSION['user_role'] ?? '') !== 'cashier') include __DIR__ . '/notif-bell.php'; ?>
                 <div class="user-chip">
                     <div class="avatar"><?= htmlspecialchars($initials) ?></div>
                     <div class="who">
@@ -279,6 +282,7 @@ $currentParams = ['range' => $range, 'search' => $search, 'product' => $productI
 window.RAMYUM_AUTO_OPEN_RECEIPT = <?= json_encode($exactReceipt !== '' ? $exactReceipt : null) ?>;
 </script>
 <script src="sidebar.js"></script>
+<script src="notif-bell.js"></script>
 <script src="receipt-history.js"></script>
 </body>
 </html>

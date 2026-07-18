@@ -1,0 +1,155 @@
+/* ============ Concerns (staff <-> admin chat) ============ */
+.concern-content { padding: 22px 28px; }
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.status-reserved  { background: #fff3cd; color: #8a6300; }
+.status-fulfilled { background: #d8f3dc; color: #1b6b34; }
+.status-cancelled { background: #f8d7da; color: #8a1c26; }
+
+.concern-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 22px;
+    align-items: start;
+}
+
+.concern-compose {
+    position: sticky;
+    top: 90px;
+}
+
+/* Shared form-field + button styles. staff-concern.php doesn't load
+   pos.css, so these live here too (kept in sync with pos.css/promotions.css). */
+.pos-field-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ram-muted);
+    margin: 0 0 4px;
+}
+
+.pos-select, .pos-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 2px solid rgba(117,11,29,0.3);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: #fff;
+    outline: none;
+    color: var(--ram-ink);
+    font-family: inherit;
+}
+.pos-select:focus, .pos-input:focus { border-color: var(--ram-red); }
+
+.pos-btn-secondary, .pos-btn-primary {
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 2px solid var(--ram-red);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.2s ease;
+}
+.pos-btn-secondary { background: #fff; color: var(--ram-red); }
+.pos-btn-secondary:hover { background: var(--ram-bg); }
+.pos-btn-primary { background: var(--ram-red); color: #fff; }
+.pos-btn-primary:hover:not(:disabled) { background: var(--ram-red-dark); }
+.pos-btn-primary:disabled { background: #c9b8ab; border-color: #c9b8ab; cursor: not-allowed; }
+
+.concern-compose .concern-form-new { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 4px; }
+.concern-compose .pos-input { margin-bottom: 12px; }
+.concern-compose textarea.pos-input { resize: vertical; font-family: inherit; }
+.concern-send-btn { width: 100%; margin-top: 4px; }
+
+.concern-threads .badge-count {
+    display: inline-block;
+    background: var(--ram-warn);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 999px;
+    margin-left: 8px;
+}
+
+.empty-note { color: var(--ram-muted); font-size: 0.85rem; padding: 10px 18px 18px; margin: 0; }
+
+.concern-thread-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 4px 18px 18px;
+}
+
+.concern-thread {
+    border: 1px dashed rgba(117,11,29,0.2);
+    border-radius: 14px;
+    padding: 14px 16px;
+}
+
+.concern-thread-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.concern-thread-head strong { color: var(--ram-red); font-size: 0.92rem; }
+
+.chat-bubble {
+    max-width: 85%;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+.chat-bubble p { margin: 0 0 4px; line-height: 1.4; }
+.chat-bubble time { font-size: 0.68rem; opacity: 0.75; }
+
+.chat-bubble-me {
+    background: var(--ram-red);
+    color: var(--ram-cream);
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble-me time { color: var(--ram-yellow); }
+
+.chat-bubble-admin {
+    background: var(--ram-bg);
+    color: var(--ram-ink);
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble-from {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ram-red);
+    margin-bottom: 4px;
+}
+.chat-bubble-admin time { color: var(--ram-muted); }
+
+.concern-waiting {
+    color: var(--ram-muted);
+    font-size: 0.78rem;
+    margin: 4px 0 0;
+}
+
+@media (max-width: 900px) {
+    .concern-layout { grid-template-columns: 1fr; }
+}

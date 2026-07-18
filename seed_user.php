@@ -7,6 +7,7 @@ require_once __DIR__ . '/db.php';
 
 $email = 'cj@gmail.com';
 $password = 'cj123';
+$role = 'admin';
 
 $db = get_db_connection();
 
@@ -20,7 +21,7 @@ if ($check->fetch()) {
 
 $hash = password_hash($password, PASSWORD_BCRYPT);
 
-$insert = $db->prepare('INSERT INTO users (email, password_hash) VALUES (:email, :hash)');
+$insert = $db->prepare('INSERT INTO users (email, password_hash, role) VALUES (:email, :hash)');
 $insert->execute([':email' => $email, ':hash' => $hash]);
 
 echo "Created demo user: $email / $password\n";

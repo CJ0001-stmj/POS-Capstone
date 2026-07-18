@@ -136,6 +136,7 @@ function pct1($n): string {
                 </div>
             </div>
             <div class="topbar-actions">
+                <?php include __DIR__ . '/notif-bell.php'; ?>
                 <div class="user-chip">
                     <div class="avatar"><?= htmlspecialchars($initials) ?></div>
                     <div class="who">
@@ -312,5 +313,6 @@ function pct1($n): string {
 
 <script src="promotions.js"></script>
 <script src="sidebar.js"></script>
+<script src="notif-bell.js"></script>
 </body>
 </html>

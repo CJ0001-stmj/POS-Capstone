@@ -204,6 +204,7 @@ function pesos($n) { return '₱' . number_format((float) $n, 2); }
                 </div>
             </div>
             <div class="topbar-actions">
+                <?php include __DIR__ . '/notif-bell.php'; ?>
                 <div class="user-chip">
                     <div class="avatar"><?= htmlspecialchars($initials) ?></div>
                     <div class="who">
@@ -405,5 +406,6 @@ function pesos($n) { return '₱' . number_format((float) $n, 2); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="analytics.js"></script>
 <script src="sidebar.js"></script>
+<script src="notif-bell.js"></script>
 </body>
 </html>

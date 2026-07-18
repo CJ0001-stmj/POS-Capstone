@@ -26,3 +26,13 @@ function get_db_connection(): PDO {
         exit;
     }
 }
+
+// mysqli connection, for pages using $conn->query(...) style (audit-overview.php,
+// user-access-control.php, etc). Kept alongside get_db_connection() so PDO-based
+// pages (shift-sales.php) keep working too.
+$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if ($conn->connect_error) {
+    http_response_code(500);
+    die('Database connection failed.');
+}
+$conn->set_charset(DB_CHARSET);

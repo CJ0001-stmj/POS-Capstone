@@ -38,7 +38,7 @@ if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     respond(400, ['ok' => false, 'message' => 'Please enter a valid email address.']);
 }
 
-$stmt = $db->prepare('SELECT id, email, password_hash, failed_attempts, locked_until FROM users WHERE email = :email LIMIT 1');
+$stmt = $db->prepare('SELECT id, email, password_hash, role, failed_attempts, locked_until FROM users WHERE email = :email LIMIT 1');
 $stmt->execute([':email' => strtolower($email)]);
 $user = $stmt->fetch();
 
@@ -67,7 +67,8 @@ log_attempt($db, $email, true, 'success');
 session_regenerate_id(true);
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['user_email'] = $user['email'];
-$_SESSION['logged_in_at'] = time();
+$_SESSION['user_role'] = $user['role'];
+$_SESSION['logged_in_at'] = time(); // shift start ("time in") — dashboard.php reads this
 
 respond(200, [
     'ok' => true, 

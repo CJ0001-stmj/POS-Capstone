@@ -1,26 +1,26 @@
 <?php
 /**
- * Shared sidebar navigator.
+ * Cashier-only sidebar navigator.
  *
- * Include this from any page AFTER session_start() and after $userEmail
- * has been set, e.g.:
+ * Separate component from sidebar.php on purpose — sidebar.php owns the
+ * full admin/manager nav (Analytics, Promotions, Audit & Access, etc.)
+ * and derives the cashier menu by filtering that array down. That means
+ * every time an admin-only item gets added to sidebar.php, this file's
+ * output is on the hook for staying correct too. Keeping cashier's own
+ * fixed module list here instead means dashboard-cashier.php's nav is
+ * self-contained and can't drift just because the admin sidebar changed.
  *
- *     require_once __DIR__ . '/db.php';
- *     $userEmail = $_SESSION['user_email'];
- *     ...
- *     <?php include __DIR__ . '/sidebar.php'; ?>
+ * Include this from dashboard-cashier.php AFTER session_start() and after
+ * $userEmail has been set, same convention as sidebar.php:
  *
- * One nav definition lives here so every page (dashboard, POS, promotions,
- * analytics, etc.) renders the exact same markup — no more copy-pasting
- * the <aside> block (and its submenu logic) into each page separately.
+ *     <?php include __DIR__ . '/sidebar-cashier.php'; ?>
  */
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 
-// Each entry is either a plain link, or a link with a "children" submenu.
-// "match" lists which basenames count as "this item is the active one" —
-// for parent items with children, that includes the children's own pages.
-$navItems = [
+// Fixed set — everything a cashier actually touches day to day. No
+// filtering, no shared array with the admin side.
+$cashierNavItems = [
     [
         'label' => 'Overview',
         'href'  => 'dashboard.php',
@@ -55,40 +55,18 @@ $navItems = [
         ],
     ],
     [
-        'label' => 'Sales Analytics',
-        'href'  => 'analytics.php',
-        'icon'  => 'fa-chart-line',
-        'match' => ['analytics.php'],
+        'label' => 'Concerns',
+        'href'  => 'staff-concern.php',
+        'icon'  => 'fa-comments',
+        'match' => ['staff-concern.php'],
     ],
     [
-        'label' => 'Promotions',
-        'href'  => 'promotions.php',
-        'icon'  => 'fa-tags',
-        'match' => ['promotions.php'],
-    ],
-    [
-        'label' => 'Audit & Access',
-        'href'  => 'audit-overview.php',
-        'icon'  => 'fa-user-shield',
-        'match' => ['audit-overview.php', 'user-access-control.php', 'staff-inbox.php'],
-        'children' => [
-            ['label' => 'Overview',             'href' => 'audit-overview.php',      'icon' => 'fa-chart-pie'],
-            ['label' => 'User Access Control',  'href' => 'user-access-control.php', 'icon' => 'fa-user-lock'],
-            ['label' => 'Inbox',                'href' => 'staff-inbox.php',         'icon' => 'fa-inbox'],
-        ],
+        'label' => 'Admin Messages',
+        'href'  => 'admin-messages.php',
+        'icon'  => 'fa-bullhorn',
+        'match' => ['admin-messages.php'],
     ],
 ];
-
-// Cashiers only get the modules they actually work in day to day —
-// Overview (this dashboard), Point of Sale, Purchase Requests, and
-// Orders & Reservations. Analytics/Promotions/Audit stay admin+manager only.
-$userRole = $_SESSION['user_role'] ?? 'cashier';
-if ($userRole === 'cashier') {
-    $cashierHrefs = ['dashboard.php', 'pos.php', 'stock-monitoring.php', 'receipt-history.php', 'purchase-requests.php', 'orders.php', 'order-history.php'];
-    $navItems = array_values(array_filter($navItems, function ($item) use ($cashierHrefs) {
-        return in_array($item['href'], $cashierHrefs, true);
-    }));
-}
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -99,7 +77,7 @@ if ($userRole === 'cashier') {
         </div>
     </div>
     <ul class="sidebar-nav">
-        <?php foreach ($navItems as $item): ?>
+        <?php foreach ($cashierNavItems as $item): ?>
             <?php
             $isActive = in_array($currentPage, $item['match'], true);
             $hasChildren = !empty($item['children']);
