@@ -26,11 +26,16 @@ $flash = null;
 
 // Handle new concern submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $subject = trim($_POST['subject'] ?? '');
+    $category = trim($_POST['category'] ?? '');
+    $otherText = trim($_POST['subject_other'] ?? '');
     $message = trim($_POST['message'] ?? '');
 
-    if ($subject === '' || $message === '') {
-        $flash = ['type' => 'error', 'text' => 'Please fill in both a subject and a message.'];
+    $subject = $category === 'Other'
+        ? ($otherText !== '' ? 'Other — ' . $otherText : 'Other')
+        : $category;
+
+    if ($category === '' || $message === '') {
+        $flash = ['type' => 'error', 'text' => 'Please choose a category and fill in a message.'];
     } else {
         $stmt = $pdo->prepare(
             'INSERT INTO staff_concerns (submitted_by, submitted_by_email, subject, message, status)
@@ -123,9 +128,19 @@ foreach ($threads as $t) {
                         <h3><i class="fa-solid fa-paper-plane"></i> New Message</h3>
                     </div>
                     <form method="post" class="concern-form-new">
-                        <label class="pos-field-label">Subject</label>
-                        <input type="text" name="subject" class="pos-input" placeholder="e.g. Register drawer won't open" required maxlength="150">
-                        <label class="pos-field-label">Message</label>
+                        <label class="pos-field-label">Category</label>
+                        <select name="category" id="concernCategory" class="pos-select" required>
+                            <option value="" disabled selected>Choose a category...</option>
+                            <option value="Equipment / POS Issue">Equipment / POS Issue</option>
+                            <option value="Inventory / Stock">Inventory / Stock</option>
+                            <option value="Schedule / Shift">Schedule / Shift</option>
+                            <option value="Payroll / Pay">Payroll / Pay</option>
+                            <option value="Customer Complaint">Customer Complaint</option>
+                            <option value="Coworker / Conduct">Coworker / Conduct</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="text" name="subject_other" id="concernSubjectOther" class="pos-input" placeholder="Briefly describe the category" maxlength="150" style="display:none; margin-top:10px;">
+                        <label class="pos-field-label" style="margin-top:12px;">Message</label>
                         <textarea name="message" class="pos-input" rows="4" placeholder="Describe the issue or question..." required></textarea>
                         <button type="submit" class="pos-btn-primary concern-send-btn">
                             <i class="fa-solid fa-paper-plane"></i> Send to Admin
@@ -177,6 +192,14 @@ foreach ($threads as $t) {
     </div>
 </div>
 
+<script>
+document.getElementById('concernCategory').addEventListener('change', (e) => {
+    const otherField = document.getElementById('concernSubjectOther');
+    const isOther = e.target.value === 'Other';
+    otherField.style.display = isOther ? 'block' : 'none';
+    otherField.required = isOther;
+});
+</script>
 <script src="notif-bell.js"></script>
 <script src="sidebar.js"></script>
 </body>

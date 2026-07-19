@@ -72,7 +72,17 @@ foreach ($stmt->fetchAll() as $row) {
     ];
 }
 
-$__notifBadgeCount = $__openConcernCount;
+$stmt = $__notifPdo->query(
+    "SELECT request_no, product_name, supplier_name, quantity_requested, requested_by_email, created_at
+     FROM purchase_requests
+     WHERE status = 'pending'
+     ORDER BY created_at DESC
+     LIMIT 5"
+);
+$__notifPurchaseRequests = $stmt->fetchAll();
+$__pendingPrCount = (int) $__notifPdo->query("SELECT COUNT(*) c FROM purchase_requests WHERE status = 'pending'")->fetch()['c'];
+
+$__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
 ?>
 <div class="notif-wrap">
     <button class="icon-btn" id="notifBell" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
@@ -92,6 +102,10 @@ $__notifBadgeCount = $__openConcernCount;
             </button>
             <button class="notif-tab" data-tab="timeinout"><i class="fa-solid fa-user-clock"></i> Time In/Out</button>
             <button class="notif-tab" data-tab="topproducts"><i class="fa-solid fa-ranking-star"></i> Top Products</button>
+            <button class="notif-tab" data-tab="purchaserequests">
+                <i class="fa-solid fa-dolly"></i> Purchase Requests
+                <?php if ($__pendingPrCount > 0): ?><span class="notif-tab-count"><?= (int) $__pendingPrCount ?></span><?php endif; ?>
+            </button>
         </div>
 
         <div class="notif-list notif-pane" data-pane="concerns">
@@ -130,6 +144,18 @@ $__notifBadgeCount = $__openConcernCount;
                 </div>
             <?php endforeach; endif; ?>
             <a href="analytics.php" class="notif-view-all">View all in Analytics <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+
+        <div class="notif-list notif-pane" data-pane="purchaserequests" style="display:none;">
+            <?php if (empty($__notifPurchaseRequests)): ?>
+                <p class="notif-empty">No new supplier requests.</p>
+            <?php else: foreach ($__notifPurchaseRequests as $pr): ?>
+                <div class="notif-item notif-item-unread">
+                    <p><?= htmlspecialchars($pr['request_no']) ?> &middot; <?= htmlspecialchars($pr['quantity_requested']) ?> &times; <?= htmlspecialchars($pr['product_name']) ?></p>
+                    <span>From <?= htmlspecialchars($pr['supplier_name']) ?> &middot; sent in by <?= htmlspecialchars(explode('@', $pr['requested_by_email'])[0]) ?> &middot; <?= htmlspecialchars((new DateTime($pr['created_at']))->format('M j, g:i A')) ?></span>
+                </div>
+            <?php endforeach; endif; ?>
+            <a href="purchase-requests.php" class="notif-view-all">View all in Purchase Requests <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </div>
 </div>

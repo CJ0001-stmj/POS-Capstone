@@ -13,6 +13,15 @@
 
 * { box-sizing: border-box; }
 
+/* ============ MODULE ENTRANCE ANIMATION ============
+   Fade + slight rise, played once when a module/panel first
+   paints. Reused across all pages via the same keyframe name -
+   see analytics.css, pos.css, promotions.css, order-history.css. */
+@keyframes ram-fade-slide-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 body {
     margin: 0;
     background: var(--ram-bg);
@@ -271,13 +280,17 @@ body {
     display: flex;
     border-bottom: 1px solid rgba(117,11,29,0.1);
     flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 .notif-tab {
-    flex: 1;
+    flex: 0 0 auto;
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
-    padding: 9px 4px;
+    padding: 9px 10px;
     font-size: 0.66rem;
     font-weight: 700;
     color: var(--ram-muted);
@@ -400,7 +413,12 @@ body {
     padding: 18px 20px 16px;
     box-shadow: 0 10px 24px rgba(117,11,29,0.08);
     overflow: hidden;
+    animation: ram-fade-slide-in 0.45s ease both;
 }
+.kpi-strip .kpi-card:nth-child(1) { animation-delay: 0.02s; }
+.kpi-strip .kpi-card:nth-child(2) { animation-delay: 0.08s; }
+.kpi-strip .kpi-card:nth-child(3) { animation-delay: 0.14s; }
+.kpi-strip .kpi-card:nth-child(4) { animation-delay: 0.20s; }
 
 /* Cards/panels that navigate elsewhere on click */
 .clickable-card {
@@ -486,7 +504,14 @@ body {
     flex-direction: column;
     gap: 14px;
     box-shadow: 0 14px 30px rgba(117,11,29,0.10);
+    animation: ram-fade-slide-in 0.45s ease both;
 }
+.module-grid .module-card:nth-child(1) { animation-delay: 0.02s; }
+.module-grid .module-card:nth-child(2) { animation-delay: 0.08s; }
+.module-grid .module-card:nth-child(3) { animation-delay: 0.14s; }
+.module-grid .module-card:nth-child(4) { animation-delay: 0.20s; }
+.module-grid .module-card:nth-child(5) { animation-delay: 0.26s; }
+.module-grid .module-card:nth-child(6) { animation-delay: 0.32s; }
 
 /* ticket notches */
 .module-card::before,
@@ -588,7 +613,11 @@ body {
     padding: 20px 22px;
     box-shadow: 0 10px 24px rgba(117,11,29,0.08);
     margin-bottom: 26px;
+    animation: ram-fade-slide-in 0.45s ease both;
 }
+.panel-row .panel:nth-child(1) { animation-delay: 0.02s; }
+.panel-row .panel:nth-child(2) { animation-delay: 0.08s; }
+.panel-row .panel:nth-child(3) { animation-delay: 0.14s; }
 
 .panel-head {
     display: flex;
@@ -938,6 +967,45 @@ body {
     font-size: 0.8rem;
     flex-shrink: 0;
 }
+
+.module-chip-badge {
+    background: #b3261e;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    border-radius: 50px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+}
+
+/* ---- Cashier dashboard: own purchase-request status lists ---- */
+.pr-mini-list { display: flex; flex-direction: column; gap: 10px; }
+.pr-mini-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--ram-cream);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+.pr-mini-item > div { display: flex; flex-direction: column; gap: 2px; }
+.pr-mini-item strong { font-size: 0.85rem; color: var(--ram-ink); }
+.pr-mini-item span { font-size: 0.76rem; color: var(--ram-muted); }
+.pr-mini-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+.pr-mini-badge-pending   { background: #fff3cd; color: #8a6300; }
+.pr-mini-badge-forwarded { background: rgba(59,111,179,0.14); color: #3b6fb3; }
 
 /* Responsive */
 @media (max-width: 1250px) {

@@ -24,6 +24,7 @@ if (!function_exists('peso')) {
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
+date_default_timezone_set('Asia/Manila'); // match login.php - keeps shift "time in" accurate
 
 // Derive commonly expected session-backed variables (dashboard.php normally
 // injects these into scope, but we make the file resilient).
@@ -62,9 +63,19 @@ $shift = $stmt->fetch() ?: ['sales' => 0, 'trans_count' => 0];
 
 $roleLabel = ucfirst($userRole);
 
+// Cashier's own purchase requests still in play (not yet fulfilled/declined)
+// - same "needs eyes on it" states the admin notif bell tracks, just scoped
+// to this cashier so the module tile shows something worth checking.
+$stmt = $pdo->prepare(
+    "SELECT COUNT(*) c FROM purchase_requests
+     WHERE requested_by_id = :uid AND status IN ('pending', 'forwarded')"
+);
+$stmt->execute([':uid' => $_SESSION['user_id']]);
+$ownActivePrCount = (int) $stmt->fetch()['c'];
+
 $modules = [
     ['icon' => 'fa-cash-register', 'title' => 'Point of Sale & Transactions', 'href' => 'pos.php'],
-    ['icon' => 'fa-dolly',         'title' => 'Purchase Request Management',  'href' => 'purchase-requests.php'],
+    ['icon' => 'fa-dolly',         'title' => 'Purchase Request Management',  'href' => 'purchase-requests.php', 'badge' => $ownActivePrCount],
     ['icon' => 'fa-bowl-food',     'title' => 'Customer Order & Reservation', 'href' => 'orders.php'],
     ['icon' => 'fa-bullhorn',      'title' => 'Admin Messages',               'href' => 'admin-messages.php'],
 ];
@@ -140,10 +151,14 @@ $modules = [
                 <a class="module-chip" href="<?= htmlspecialchars($m['href']) ?>">
                     <span class="module-chip-icon"><i class="fa-solid <?= $m['icon'] ?>"></i></span>
                     <span><?= htmlspecialchars($m['title']) ?></span>
+                    <?php if (!empty($m['badge'])): ?>
+                        <span class="module-chip-badge"><?= (int) $m['badge'] ?></span>
+                    <?php endif; ?>
                     <i class="fa-solid fa-arrow-right"></i>
                 </a>
                 <?php endforeach; ?>
             </div>
+
         </main>
     </div>
 </div>

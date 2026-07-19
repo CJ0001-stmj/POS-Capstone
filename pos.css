@@ -28,7 +28,11 @@
     border-radius: 14px;
     box-shadow: 0 10px 24px rgba(117,11,29,0.08);
     overflow: hidden;
+    /* ram-fade-slide-in keyframe lives in dashboard.css, loaded first */
+    animation: ram-fade-slide-in 0.45s ease both;
 }
+.pos-widgets .pos-widget:nth-child(1) { animation-delay: 0.02s; }
+.pos-widgets .pos-widget:nth-child(2) { animation-delay: 0.08s; }
 
 .pos-widget-head {
     background: var(--ram-red);
@@ -219,6 +223,13 @@
 .pos-product-card.promo-slow_selling .p-promo-badge { background: var(--ram-warn); }
 .pos-product-card.promo-replaced_model .p-promo-badge { background: #3a6ea5; }
 
+.p-promo-detail {
+    font-size: 0.66rem;
+    color: var(--ram-muted);
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
 .p-price-strike {
     color: var(--ram-muted);
     text-decoration: line-through;
@@ -248,6 +259,8 @@
     flex-direction: column;
     max-height: calc(100vh - 110px);
     overflow: hidden;
+    animation: ram-fade-slide-in 0.45s ease both;
+    animation-delay: 0.1s;
 }
 
 .pos-cart-head {

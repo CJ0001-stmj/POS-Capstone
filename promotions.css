@@ -29,7 +29,13 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    /* ram-fade-slide-in keyframe lives in dashboard.css, loaded first */
+    animation: ram-fade-slide-in 0.45s ease both;
 }
+.promo-reason-grid .promo-reason-card:nth-child(1) { animation-delay: 0.02s; }
+.promo-reason-grid .promo-reason-card:nth-child(2) { animation-delay: 0.08s; }
+.promo-reason-grid .promo-reason-card:nth-child(3) { animation-delay: 0.14s; }
+.promo-reason-grid .promo-reason-card:nth-child(4) { animation-delay: 0.20s; }
 .promo-reason-top {
     display: flex;
     align-items: center;

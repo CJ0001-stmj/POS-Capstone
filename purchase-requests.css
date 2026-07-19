@@ -1,0 +1,236 @@
+/* ============ Purchase Requests ============
+   Builds on dashboard.css (.panel, .kpi-card, ram-fade-slide-in keyframe)
+   which is loaded first. This page does NOT load pos.css, so every
+   pos-* class it uses (pos-field-label, pos-select, pos-input, pos-btn-*,
+   pos-modal-overlay, pos-modal, pos-loading, pos-spinner, pos-receipt-*)
+   is defined right here instead - same approach promotions.css takes,
+   since promotions.php also skips pos.css. */
+
+.pr-form-panel {
+    background: var(--ram-cream);
+    border-radius: 16px;
+    padding: 20px 22px;
+    margin-bottom: 26px;
+    box-shadow: 0 10px 24px rgba(117,11,29,0.08);
+    border: 2px dashed rgba(117,11,29,0.25);
+    animation: ram-fade-slide-in 0.45s ease both;
+}
+
+.pr-form-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 0.8fr;
+    gap: 14px;
+    margin-bottom: 4px;
+}
+
+/* ---- shared field + button styles (pos.css isn't loaded here) ---- */
+.pos-field-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ram-muted);
+    margin: 0 0 4px;
+}
+.pr-form-grid .pos-field-label { margin-top: 0; }
+
+.pos-select, .pos-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 2px solid rgba(117,11,29,0.3);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: #fff;
+    outline: none;
+    color: var(--ram-ink);
+    font-family: inherit;
+}
+.pos-select:focus, .pos-input:focus { border-color: var(--ram-red); }
+
+.pos-btn-secondary, .pos-btn-primary {
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 2px solid var(--ram-red);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.2s ease;
+}
+.pos-btn-secondary { background: #fff; color: var(--ram-red); }
+.pos-btn-secondary:hover { background: var(--ram-bg); }
+.pos-btn-primary { background: var(--ram-red); color: #fff; }
+.pos-btn-primary:hover:not(:disabled) { background: var(--ram-red-dark); }
+.pos-btn-primary:disabled { background: #c9b8ab; border-color: #c9b8ab; cursor: not-allowed; }
+
+.pr-form-note {
+    color: #b3261e;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 8px 0 0;
+}
+
+.pr-submit-btn {
+    margin-top: 16px;
+    max-width: 260px;
+}
+.pr-submit-btn:disabled {
+    background: #c9b8ab;
+    border-color: #c9b8ab;
+    cursor: not-allowed;
+}
+
+/* ---- modal overlays (loading / success) - pos.css not loaded here ---- */
+.pos-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(43,24,16,0.55);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.pos-modal-overlay.show { display: flex; }
+
+.pos-modal {
+    background: #fff;
+    border-radius: 20px;
+    padding: 26px 26px 22px;
+    max-width: 440px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+}
+.pos-modal-sub { color: var(--ram-muted); font-size: 0.82rem; margin: 0 0 14px; }
+.pos-modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+.pos-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #fff9e6;
+    font-weight: 700;
+}
+.pos-spinner {
+    width: 54px; height: 54px;
+    border: 5px solid rgba(255,249,230,0.3);
+    border-top-color: var(--ram-yellow);
+    border-radius: 50%;
+    animation: pos-spin 0.9s linear infinite;
+}
+@keyframes pos-spin { to { transform: rotate(360deg); } }
+
+.pos-receipt-modal { max-width: 400px; }
+.pos-receipt-check {
+    text-align: center;
+    font-size: 2.6rem;
+    color: var(--ram-good);
+    margin-bottom: 4px;
+}
+
+/* ---- tables ---- */
+.pr-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.pr-table th {
+    text-align: left;
+    color: var(--ram-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 8px 10px;
+    border-bottom: 2px solid rgba(117,11,29,0.12);
+    white-space: nowrap;
+}
+.pr-table td {
+    padding: 10px;
+    border-bottom: 1px dashed rgba(117,11,29,0.12);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.pr-table tr:last-child td { border-bottom: none; }
+
+.pr-empty-cell {
+    text-align: center;
+    color: var(--ram-muted);
+    padding: 20px !important;
+    white-space: normal !important;
+}
+
+/* Each row plays the entrance animation once when it's inserted/shown -
+   the pending review queue reuses this whenever a fresh request lands. */
+.pr-row, .pr-hist-row {
+    animation: ram-fade-slide-in 0.35s ease both;
+}
+
+/* ---- status badges ---- */
+.pr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+.pr-badge-pending  { background: #fff3cd; color: #8a6300; }
+.pr-badge-approved { background: #d8f3dc; color: #1b6b34; }
+.pr-badge-rejected { background: #f8d7da; color: #8a1c26; }
+
+.pr-badge-pending i { font-size: 0.78rem; }
+
+/* ---- row actions ---- */
+.pr-row-actions { display: flex; gap: 8px; white-space: nowrap; }
+
+.pr-approve-btn, .pr-reject-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+.pr-approve-btn { background: var(--ram-good); color: #fff; }
+.pr-reject-btn  { background: #fff; color: #b3261e; border: 1px solid rgba(179,38,30,0.4); }
+.pr-approve-btn:hover, .pr-reject-btn:hover { opacity: 0.85; }
+
+.pr-approve-btn:disabled, .pr-reject-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Inline per-row "processing" state while an approve/reject call is
+   in flight — button keeps its place, spinner replaces its icon. */
+.pr-row.processing .pr-approve-btn .fa-check,
+.pr-row.processing .pr-reject-btn .fa-xmark {
+    display: none;
+}
+.pr-row.processing .pr-approve-btn::before,
+.pr-row.processing .pr-reject-btn::before {
+    content: "";
+    width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: pr-spin 0.7s linear infinite;
+}
+.pr-row.processing .pr-reject-btn::before {
+    border: 2px solid rgba(179,38,30,0.3);
+    border-top-color: #b3261e;
+}
+@keyframes pr-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+    .pr-form-grid { grid-template-columns: 1fr; }
+}

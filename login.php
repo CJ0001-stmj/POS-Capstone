@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Manila'); // store's local time - keeps "time in" accurate for shift monitoring
 header('Content-Type: application/json');
 require_once __DIR__ . '/db.php';
 

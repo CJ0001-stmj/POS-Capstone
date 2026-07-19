@@ -116,12 +116,18 @@ $openCount = $conn->query("SELECT COUNT(*) c FROM staff_concerns WHERE status = 
 
             <form method="post" class="concern-form">
                 <input type="hidden" name="concern_id" value="<?= (int)$c['id'] ?>">
+                <button type="button" class="suggest-reply-btn"
+                        data-subject="<?= htmlspecialchars($c['subject']) ?>"
+                        data-message="<?= htmlspecialchars($c['message']) ?>"
+                        title="Fill in a suggested reply based on this concern">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest Reply
+                </button>
                 <select name="status">
                     <option value="open" <?= $c['status']==='open'?'selected':'' ?>>Open</option>
                     <option value="in_review" <?= $c['status']==='in_review'?'selected':'' ?>>In Review</option>
                     <option value="resolved" <?= $c['status']==='resolved'?'selected':'' ?>>Resolved</option>
                 </select>
-                <input type="text" name="resolution_notes" placeholder="Resolution notes..." value="<?= htmlspecialchars($c['resolution_notes'] ?? '') ?>">
+                <input type="text" name="resolution_notes" class="resolution-notes-input" placeholder="Resolution notes..." value="<?= htmlspecialchars($c['resolution_notes'] ?? '') ?>">
                 <button type="submit"><i class="fa-solid fa-check"></i> Update</button>
             </form>
         </div>
@@ -133,5 +139,6 @@ $openCount = $conn->query("SELECT COUNT(*) c FROM staff_concerns WHERE status = 
 </main>
 <script src="sidebar.js"></script>
 <script src="notif-bell.js"></script>
+<script src="staff-inbox.js"></script>
 </body>
 </html>

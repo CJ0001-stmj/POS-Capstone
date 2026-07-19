@@ -17,7 +17,7 @@ $categories = $db->query('SELECT id, name, icon FROM categories ORDER BY sort_or
 
 // Active products, grouped by category for the grid + embedded as JSON for the cart/search logic
 $products = $db->query(
-    'SELECT id, category_id, sku, name, price, stock_qty, low_stock_threshold
+    'SELECT id, category_id, sku, name, price, stock_qty, low_stock_threshold, expiry_date, is_superseded
      FROM products WHERE is_active = 1 ORDER BY name'
 )->fetchAll();
 
@@ -33,6 +33,27 @@ foreach ($products as &$p) {
     $p['promo_reason'] = $promo['reason'] ?? null;
     $p['promo_reason_label'] = $promo ? (PROMO_ENGINE_LABELS[$promo['reason']] ?? 'Promo') : null;
     $p['promo_discount_percent'] = $promo['discount_percent'] ?? null;
+
+    // Extra one-line detail under the badge - what actually triggered it,
+    // not just the generic reason label.
+    $p['promo_detail'] = null;
+    if ($promo) {
+        switch ($promo['reason']) {
+            case 'near_expiration':
+                if (!empty($p['expiry_date'])) {
+                    $days = (int) floor((strtotime($p['expiry_date']) - strtotime('today')) / 86400);
+                    $p['promo_detail'] = 'Expires ' . date('M j, Y', strtotime($p['expiry_date']))
+                        . ' (' . ($days <= 0 ? 'today' : "in {$days}d") . ')';
+                }
+                break;
+            case 'slow_selling':
+                $p['promo_detail'] = 'No sales in last 30 days';
+                break;
+            case 'replaced_model':
+                $p['promo_detail'] = 'Superseded by newer model';
+                break;
+        }
+    }
 }
 unset($p);
 
@@ -190,6 +211,9 @@ $promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
                                 <?= $out ? 'disabled' : '' ?>>
                             <?php if ($hasPromo): ?>
                                 <span class="p-promo-badge"><i class="fa-solid fa-tag"></i> <?= htmlspecialchars($p['promo_reason_label']) ?></span>
+                                <?php if ($p['promo_detail']): ?>
+                                    <span class="p-promo-detail"><?= htmlspecialchars($p['promo_detail']) ?></span>
+                                <?php endif; ?>
                             <?php endif; ?>
                             <span class="p-name"><?= htmlspecialchars($p['name']) ?></span>
                             <span class="p-sku"><?= htmlspecialchars($p['sku']) ?></span>
@@ -319,9 +343,9 @@ window.RAMYUM_PRODUCTS = <?= $productsJson ?: '[]' ?>;
 window.RAMYUM_PROMO = <?= $promoJson ?: 'null' ?>;
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onscan.js@1.5.2/onscan.min.js"></script>
 <script src="pos.js"></script>
 <script src="sidebar.js"></script>
 <script src="notif-bell.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/onscan.js@1.5.2/onscan.min.js"></script>
 </body>
 </html>

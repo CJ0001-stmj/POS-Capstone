@@ -6,38 +6,37 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['user_email'])) {
     exit;
 }
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/promotion_engine.php';
 
 $userEmail = $_SESSION['user_email'];
 $userRole  = $_SESSION['user_role'] ?? 'cashier';
 $initials  = strtoupper(substr($userEmail, 0, 1));
 $db = get_db_connection();
 
-// Categories
-$categories = $db->query('SELECT id, name, icon FROM categories ORDER BY sort_order, name')->fetchAll();
+function peso($n): string {
+    return '₱' . number_format((float) $n, 2);
+}
 
-// Active products, same shape pos.php uses (product grid + cart both read
-// this JSON), including any live clearance promo per product.
-$products = $db->query(
-    'SELECT id, category_id, sku, name, price, stock_qty, low_stock_threshold
-     FROM products WHERE is_active = 1 ORDER BY name'
+// Orders land in `pending_orders` from wherever customers place them
+// (not this app). This page only processes what's already there.
+$pendingOrders = $db->query(
+    "SELECT po.*,
+            (SELECT GROUP_CONCAT(CONCAT(product_name, ' x', quantity) SEPARATOR ', ')
+             FROM pending_order_items WHERE pending_order_id = po.id) AS items_summary
+     FROM pending_orders po
+     WHERE po.status = 'pending'
+     ORDER BY po.created_at ASC"
 )->fetchAll();
 
-$productPromos = all_product_promotions($db);
-foreach ($products as &$p) {
-    $promo = $productPromos[(int) $p['id']] ?? null;
-    $p['promo_id'] = $promo['promotion_id'] ?? null;
-    $p['promo_name'] = $promo['name'] ?? null;
-    $p['promo_reason'] = $promo['reason'] ?? null;
-    $p['promo_reason_label'] = $promo ? (PROMO_ENGINE_LABELS[$promo['reason']] ?? 'Promo') : null;
-    $p['promo_discount_percent'] = $promo['discount_percent'] ?? null;
-}
-unset($p);
-
-$activePromo = active_storewide_promotion($db);
-
-$productsJson = json_encode($products, JSON_NUMERIC_CHECK);
-$promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
+// Reservations already deduct stock on creation elsewhere - this page
+// just surfaces the ones still waiting to be picked up / paid for.
+$reservations = $db->query(
+    "SELECT r.*,
+            (SELECT GROUP_CONCAT(CONCAT(product_name, ' x', quantity) SEPARATOR ', ')
+             FROM reservation_items WHERE reservation_id = r.id) AS items_summary
+     FROM reservations r
+     WHERE r.status = 'reserved'
+     ORDER BY r.created_at ASC"
+)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +53,10 @@ $promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
 <body>
 <div class="app-shell">
 
-    <?php include __DIR__ . '/sidebar.php'; ?>
+    <?php
+    $__sidebarFile = ($userRole === 'cashier') ? 'sidebar-cashier.php' : 'sidebar.php';
+    include __DIR__ . '/' . $__sidebarFile;
+    ?>
 
     <div class="main-area">
         <header class="topbar">
@@ -64,11 +66,11 @@ $promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
                 </button>
                 <div class="topbar-greet">
                     <h1><i class="fa-solid fa-bowl-food" style="margin-right:8px;"></i>Orders & Reservations</h1>
-                    <p>Build a walk-in customer's order, then send it to Point of Sale — or set items aside as a reservation.</p>
+                    <p>Process orders and reservations that have come in — collect cash and settle them.</p>
                 </div>
             </div>
             <div class="topbar-actions">
-                <?php include __DIR__ . '/notif-bell.php'; ?>
+                <?php if ($userRole !== 'cashier') include __DIR__ . '/notif-bell.php'; ?>
                 <div class="user-chip">
                     <div class="avatar"><?= htmlspecialchars($initials) ?></div>
                     <div class="who">
@@ -80,141 +82,118 @@ $promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
             </div>
         </header>
 
-        <main class="content pos-content">
+        <main class="content">
 
-            <div class="pos-layout">
-
-                <!-- ============ LEFT: catalog ============ -->
-                <section class="pos-catalog">
-
-                    <div class="pos-search-row">
-                        <div class="pos-search">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="productSearch" placeholder="Search products or SKU...">
-                        </div>
-                    </div>
-
-                    <div class="pos-tabs" id="categoryTabs">
-                        <button class="pos-tab active" data-category="all">
-                            <i class="fa-solid fa-border-all"></i> All
-                        </button>
-                        <?php foreach ($categories as $cat): ?>
-                        <button class="pos-tab" data-category="<?= (int)$cat['id'] ?>">
-                            <i class="fa-solid <?= htmlspecialchars($cat['icon']) ?>"></i> <?= htmlspecialchars($cat['name']) ?>
-                        </button>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <div class="pos-product-grid" id="productGrid">
-                        <?php foreach ($products as $p): $out = $p['stock_qty'] <= 0; $hasPromo = $p['promo_discount_percent'] !== null; ?>
-                        <button type="button" class="pos-product-card <?= $out ? 'out' : '' ?> <?= $hasPromo ? 'has-promo promo-' . htmlspecialchars($p['promo_reason']) : '' ?>"
-                                data-id="<?= (int)$p['id'] ?>"
-                                data-category="<?= (int)$p['category_id'] ?>"
-                                data-name="<?= htmlspecialchars($p['name']) ?>"
-                                data-sku="<?= htmlspecialchars($p['sku']) ?>"
-                                <?= $out ? 'disabled' : '' ?>>
-                            <?php if ($hasPromo): ?>
-                                <span class="p-promo-badge"><i class="fa-solid fa-tag"></i> <?= htmlspecialchars($p['promo_reason_label']) ?></span>
-                            <?php endif; ?>
-                            <span class="p-name"><?= htmlspecialchars($p['name']) ?></span>
-                            <span class="p-sku"><?= htmlspecialchars($p['sku']) ?></span>
-                            <?php if ($hasPromo):
-                                $discounted = (float)$p['price'] * (1 - (float)$p['promo_discount_percent'] / 100);
-                            ?>
-                                <span class="p-price">
-                                    <span class="p-price-strike">₱<?= number_format((float)$p['price'], 2) ?></span>
-                                    ₱<?= number_format($discounted, 2) ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="p-price">₱<?= number_format((float)$p['price'], 2) ?></span>
-                            <?php endif; ?>
-                            <span class="p-stock <?= $p['stock_qty'] <= $p['low_stock_threshold'] ? 'low' : '' ?>">
-                                <?= $out ? 'Out of stock' : (int)$p['stock_qty'] . ' in stock' ?>
-                            </span>
-                        </button>
-                        <?php endforeach; ?>
-                        <p class="pos-empty-note" id="noResults" style="display:none;">No products match your search.</p>
-                    </div>
-                </section>
-
-                <!-- ============ RIGHT: walk-in transaction container ============ -->
-                <aside class="pos-cart">
-                    <div class="pos-cart-head">
-                        <h2><i class="fa-solid fa-basket-shopping"></i> Walk-in Transaction</h2>
-                        <button type="button" class="pos-clear-btn" id="clearCartBtn" title="Clear">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
-
-                    <!-- Order vs. Reservation -->
-                    <div class="type-toggle" id="typeToggle" role="tablist">
-                        <button type="button" class="type-btn active" data-type="order" role="tab" aria-selected="true">
-                            <i class="fa-solid fa-cart-shopping"></i> Order
-                        </button>
-                        <button type="button" class="type-btn" data-type="reservation" role="tab" aria-selected="false">
-                            <i class="fa-solid fa-clock"></i> Reservation
-                        </button>
-                    </div>
-                    <p class="type-help" id="typeHelp">Ring up the items now and send this order straight to POS for payment.</p>
-
-                    <?php if ($activePromo): ?>
-                    <label class="pos-promo-banner" for="applyPromoToggle">
-                        <input type="checkbox" id="applyPromoToggle" checked>
-                        <i class="fa-solid fa-tag"></i>
-                        <span>Apply <?= htmlspecialchars($activePromo['name']) ?> — <?= rtrim(rtrim(number_format((float)$activePromo['discount_percent'], 2), '0'), '.') ?>% off</span>
-                    </label>
-                    <?php endif; ?>
-
-                    <!-- Reservation-only customer details -->
-                    <div class="reservation-fields" id="reservationFields" style="display:none;">
-                        <label class="pos-field-label">Customer name *</label>
-                        <input type="text" id="customerName" class="pos-input" placeholder="Juan Dela Cruz">
-                        <label class="pos-field-label">Contact number (optional)</label>
-                        <input type="text" id="customerContact" class="pos-input" placeholder="09XX XXX XXXX">
-                        <label class="pos-field-label">Notes (optional)</label>
-                        <input type="text" id="reservationNotes" class="pos-input" placeholder="Pickup time, special request...">
-                    </div>
-
-                    <div class="pos-cart-items" id="cartItems">
-                        <p class="pos-empty-note" id="cartEmptyNote">Tap a product to add it to this transaction.</p>
-                    </div>
-
-                    <div class="pos-cart-summary">
-                        <div class="row"><span>Items</span><span id="sumItemCount">0</span></div>
-                        <div class="row"><span>Subtotal</span><span id="sumSubtotal">₱0.00</span></div>
-                        <div class="row discount" id="sumDiscountRow" style="display:none;">
-                            <span id="sumDiscountLabel">Discount</span><span id="sumDiscount">-₱0.00</span>
-                        </div>
-                        <div class="row total"><span>Total Amount</span><span id="sumTotal">₱0.00</span></div>
-
-                        <button type="button" class="pos-checkout-btn" id="proceedBtn" disabled>
-                            <i class="fa-solid fa-arrow-right-to-bracket"></i> <span id="proceedBtnLabel">Proceed to Payment</span>
-                        </button>
-                    </div>
-                </aside>
-
+            <div class="type-toggle" id="queueTabToggle" role="tablist">
+                <button type="button" class="type-btn active" data-tab="orders" role="tab" aria-selected="true">
+                    <i class="fa-solid fa-cart-shopping"></i> Pending Orders <span class="q-count"><?= count($pendingOrders) ?></span>
+                </button>
+                <button type="button" class="type-btn" data-tab="reservations" role="tab" aria-selected="false">
+                    <i class="fa-solid fa-clock"></i> Reservations <span class="q-count"><?= count($reservations) ?></span>
+                </button>
             </div>
+
+            <!-- ============ PENDING ORDERS ============ -->
+            <section class="queue-pane" id="pane-orders">
+                <div class="panel history-panel">
+                    <div class="history-panel-head">
+                        <h3><i class="fa-solid fa-cart-shopping"></i> Pending Orders</h3>
+                    </div>
+                    <div class="table-scroll">
+                    <table class="transactions-table queue-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Submitted</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php if (empty($pendingOrders)): ?>
+                            <tr class="empty-row"><td colspan="6">Nothing waiting to be processed right now.</td></tr>
+                        <?php else: foreach ($pendingOrders as $o): ?>
+                            <tr class="queue-row" data-type="order" data-id="<?= (int)$o['id'] ?>" data-total="<?= (float)$o['total'] ?>">
+                                <td><strong><?= htmlspecialchars($o['order_no']) ?></strong></td>
+                                <td><?= htmlspecialchars($o['customer_name'] ?: '—') ?></td>
+                                <td class="hist-items-cell"><?= htmlspecialchars($o['items_summary'] ?? '') ?></td>
+                                <td><?= peso($o['total']) ?></td>
+                                <td><?= htmlspecialchars((new DateTime($o['created_at']))->format('M j, g:i A')) ?></td>
+                                <td class="pr-row-actions">
+                                    <button type="button" class="pos-btn-primary queue-process-btn" style="padding:7px 13px; font-size:0.78rem;"><i class="fa-solid fa-cash-register"></i> Process</button>
+                                    <button type="button" class="pos-btn-secondary queue-cancel-btn" style="padding:7px 13px; font-size:0.78rem;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ RESERVATIONS ============ -->
+            <section class="queue-pane" id="pane-reservations" style="display:none;">
+                <div class="panel history-panel">
+                    <div class="history-panel-head">
+                        <h3><i class="fa-solid fa-clock"></i> Reservations Awaiting Pickup</h3>
+                    </div>
+                    <div class="table-scroll">
+                    <table class="transactions-table queue-table">
+                        <thead>
+                            <tr>
+                                <th>Reservation #</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Reserved</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php if (empty($reservations)): ?>
+                            <tr class="empty-row"><td colspan="6">No reservations waiting on pickup right now.</td></tr>
+                        <?php else: foreach ($reservations as $r): ?>
+                            <tr class="queue-row" data-type="reservation" data-id="<?= (int)$r['id'] ?>" data-total="<?= (float)$r['total'] ?>">
+                                <td><strong><?= htmlspecialchars($r['reservation_no']) ?></strong></td>
+                                <td><?= htmlspecialchars($r['customer_name']) ?></td>
+                                <td class="hist-items-cell"><?= htmlspecialchars($r['items_summary'] ?? '') ?></td>
+                                <td><?= peso($r['total']) ?></td>
+                                <td><?= htmlspecialchars((new DateTime($r['created_at']))->format('M j, g:i A')) ?></td>
+                                <td class="pr-row-actions">
+                                    <button type="button" class="pos-btn-primary queue-process-btn" style="padding:7px 13px; font-size:0.78rem;"><i class="fa-solid fa-cash-register"></i> Process</button>
+                                    <button type="button" class="pos-btn-secondary queue-cancel-btn" style="padding:7px 13px; font-size:0.78rem;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
 </div>
 
-<!-- ============ CONFIRM MODAL (order or reservation, same shell) ============ -->
-<div class="pos-modal-overlay" id="confirmOverlay">
+<!-- ============ CASH PAYMENT MODAL ============ -->
+<div class="pos-modal-overlay" id="paymentOverlay">
     <div class="pos-modal">
-        <h3 id="confirmTitle"><i class="fa-solid fa-clipboard-check"></i> Confirm This Order</h3>
-        <p class="pos-modal-sub" id="confirmSub">Double-check the items before sending this to Point of Sale.</p>
-        <div class="pos-modal-items" id="confirmItems"></div>
-        <div class="pos-modal-totals">
-            <div class="row"><span>Subtotal</span><span id="confirmSubtotal">₱0.00</span></div>
-            <div class="row discount" id="confirmDiscountRow" style="display:none;">
-                <span id="confirmDiscountLabel">Discount</span><span id="confirmDiscount">-₱0.00</span>
-            </div>
-            <div class="row"><span>Total Amount</span><span id="confirmTotal">₱0.00</span></div>
+        <h3><i class="fa-solid fa-cash-register"></i> Collect Payment</h3>
+        <p class="pos-modal-sub">Cash only — enter the amount received to settle this.</p>
+        <div class="confirm-reservation-summary">
+            <div class="r-row"><span>Total due</span><strong id="paymentTotalDisplay">₱0.00</strong></div>
         </div>
-        <div id="confirmReservationSummary" class="confirm-reservation-summary" style="display:none;"></div>
+        <label class="pos-field-label" style="margin-top:12px;">Amount received</label>
+        <input type="number" id="amountReceived" class="pos-input" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+        <div class="confirm-reservation-summary">
+            <div class="r-row"><span>Change</span><strong id="changeDueDisplay">₱0.00</strong></div>
+        </div>
+        <p class="payment-short-note" id="paymentShortNote" style="display:none;">Amount received is less than the total due.</p>
         <div class="pos-modal-actions">
-            <button type="button" class="pos-btn-secondary" id="confirmBack">Go Back &amp; Edit</button>
-            <button type="button" class="pos-btn-primary" id="confirmProceed">Confirm</button>
+            <button type="button" class="pos-btn-secondary" id="paymentBack">Go Back</button>
+            <button type="button" class="pos-btn-primary" id="paymentConfirm" disabled>Confirm Payment</button>
         </div>
     </div>
 </div>
@@ -223,30 +202,25 @@ $promoJson = json_encode($activePromo ?: null, JSON_NUMERIC_CHECK);
 <div class="pos-modal-overlay" id="loadingOverlay">
     <div class="pos-loading">
         <div class="pos-spinner"></div>
-        <p id="loadingLabel">Setting the reservation aside...</p>
+        <p id="loadingLabel">Processing...</p>
     </div>
 </div>
 
-<!-- ============ RESERVATION SUCCESS MODAL ============ -->
-<div class="pos-modal-overlay" id="reservationSuccessOverlay">
+<!-- ============ RECEIPT MODAL ============ -->
+<div class="pos-modal-overlay" id="orderReceiptOverlay">
     <div class="pos-modal pos-receipt-modal">
         <div class="pos-receipt-check"><i class="fa-solid fa-circle-check"></i></div>
-        <h3 style="text-align:center;">Reservation Confirmed</h3>
-        <div class="pos-receipt" id="reservationPaper"></div>
+        <h3 style="text-align:center;">Payment Received</h3>
+        <div class="pos-receipt" id="orderReceiptPaper"></div>
         <div class="pos-modal-actions">
-            <button type="button" class="pos-btn-primary" id="newTransactionBtn">
-                <i class="fa-solid fa-plus"></i> New Transaction
-            </button>
+            <button type="button" class="pos-btn-secondary" id="printReceiptBtn"><i class="fa-solid fa-print"></i> Print</button>
+            <button type="button" class="pos-btn-primary" id="closeReceiptBtn"><i class="fa-solid fa-check"></i> Done</button>
         </div>
     </div>
 </div>
 
-<script>
-window.RAMYUM_PRODUCTS = <?= $productsJson ?: '[]' ?>;
-window.RAMYUM_PROMO = <?= $promoJson ?: 'null' ?>;
-</script>
 <script src="orders.js"></script>
 <script src="sidebar.js"></script>
-<script src="notif-bell.js"></script>
+<?php if ($userRole !== 'cashier'): ?><script src="notif-bell.js"></script><?php endif; ?>
 </body>
 </html>

@@ -5,6 +5,8 @@
     box-shadow: 0 10px 24px rgba(117,11,29,0.08);
     padding: 20px 22px;
     margin-bottom: 28px;
+    /* ram-fade-slide-in keyframe lives in dashboard.css, loaded first */
+    animation: ram-fade-slide-in 0.45s ease both;
 }
 
 .an-panel h3 {
@@ -24,7 +26,7 @@
     display: grid;
     grid-template-columns: 1.3fr 1fr;
     gap: 22px;
-    margin-bottom: 28px;
+    margin-bottom: 10px;
 }
 
 .an-stock-bar {
@@ -75,7 +77,7 @@
 .an-list-row .meta { color: var(--ram-muted); font-size: 0.75rem; white-space: nowrap; margin-left: 10px; }
 
 .an-chart-wrap { position: relative; height: 260px; }
-.an-chart-wrap.an-chart-small { height: 220px; }
+.an-chart-wrap.an-chart-big { height: 400px; }
 
 /* ---- performance panel ---- */
 .an-panel-head {

@@ -5,6 +5,8 @@
 .history-panel {
     padding: 18px;
     margin: 16px;
+    /* ram-fade-slide-in keyframe lives in dashboard.css, loaded first */
+    animation: ram-fade-slide-in 0.45s ease both;
 }
 
 .history-panel-head {

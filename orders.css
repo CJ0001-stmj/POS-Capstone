@@ -1,12 +1,19 @@
-/* ============ Orders & Reservations — extends pos.css ============ */
+/* ============ Orders & Reservations — receivables queue ============ */
+/* Builds on pos.css (pos-modal-*, pos-btn-*, pos-input, pos-field-label,
+   pos-loading/pos-spinner, pos-receipt-*) and dashboard.css (.panel,
+   .transactions-table, ram-fade-slide-in). No product grid/cart here
+   anymore — orders and reservations are created elsewhere; this page
+   only processes what's already queued up. */
 
 .type-toggle {
     display: flex;
     gap: 8px;
-    padding: 12px 16px 0;
+    padding: 0 0 4px;
+    margin: 4px 0 16px;
 }
 .type-btn {
     flex: 1;
+    max-width: 260px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,19 +34,54 @@
     border-color: var(--ram-red);
     color: var(--ram-yellow);
 }
+.type-btn .q-count {
+    background: rgba(0,0,0,0.15);
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+}
+.type-btn.active .q-count { background: rgba(255,255,255,0.25); }
 
-.type-help {
-    margin: 8px 16px 0;
-    font-size: 0.74rem;
+.history-panel {
+    padding: 18px;
+    animation: ram-fade-slide-in 0.45s ease both;
+}
+.history-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.history-panel-head h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--ram-red);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-scroll { overflow-x: auto; }
+.queue-table th { white-space: nowrap; }
+.hist-items-cell {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--ram-muted);
-    line-height: 1.4;
+    font-size: 0.82rem;
+}
+.empty-row td {
+    text-align: center;
+    color: var(--ram-muted);
+    padding: 20px !important;
+    white-space: normal !important;
 }
 
-.reservation-fields {
-    padding: 4px 16px 2px;
-}
-.reservation-fields .pos-input { margin-bottom: 4px; }
+.pr-row-actions { display: flex; gap: 8px; white-space: nowrap; }
 
+/* ---- confirm/summary rows (reused inside the payment modal) ---- */
 .confirm-reservation-summary {
     margin-top: 14px;
     padding: 12px 14px;
@@ -55,3 +97,15 @@
     padding: 2px 0;
 }
 .confirm-reservation-summary .r-row strong { color: var(--ram-red); }
+
+.payment-short-note {
+    color: #b3261e;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 8px 0 0;
+}
+
+@media (max-width: 640px) {
+    .type-toggle { flex-direction: column; }
+    .type-btn { max-width: none; }
+}

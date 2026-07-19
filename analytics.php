@@ -296,7 +296,7 @@ function pesos($n) { return '₱' . number_format((float) $n, 2); }
 
                 <div class="an-panel an-category-mix">
                     <h3><i class="fa-solid fa-chart-pie"></i> Revenue by category</h3>
-                    <div class="an-chart-wrap an-chart-small">
+                    <div class="an-chart-wrap an-chart-big">
                         <canvas id="categoryChart"></canvas>
                     </div>
                 </div>
