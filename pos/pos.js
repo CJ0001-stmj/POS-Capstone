@@ -393,7 +393,7 @@ confirmProceed.addEventListener('click', async () => {
     loadingOverlay.classList.add('show');
 
     const payload = {
-        cart: Array.from(cart.values()).map(l => ({ product_id: l.id, quantity: l.qty })),
+        items: Array.from(cart.values()).map(l => ({ product_id: l.id, quantity: l.qty })),
         amount_received: paymentMethodEl.value === 'cash' ? (parseFloat(amountReceivedEl.value) || 0) : currentTotal(),
         payment_method: paymentMethodEl.value,
         apply_promo: promoApplied(),
@@ -414,7 +414,7 @@ confirmProceed.addEventListener('click', async () => {
             return;
         }
 
-        lastReceipt = data.receipt;
+        lastReceipt = data.sale;
         renderReceipt(lastReceipt);
         receiptOverlay.classList.add('show');
         applyStockFromReceipt(lastReceipt);

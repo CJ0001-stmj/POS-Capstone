@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/promotion_engine.php';
+require_once __DIR__ . '/../prm/promotion_engine.php';
 
 
 // Idle session timeout — kill session after 10 min no activity
@@ -329,6 +329,6 @@ function pct1($n): string {
 <script src="/prm/promotions.js"></script>
 <script src="/sidebar.js"></script>
 <script src="/notif-bell.js"></script>
-<script src="/..idle-timeout.js"></script>
+<script src="/../idle-timeout.js"></script>
 </body>
 </html>

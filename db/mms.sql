@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 20, 2026 at 11:09 AM
+-- Generation Time: Jul 20, 2026 at 09:23 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -117,7 +117,30 @@ INSERT INTO `login_audit` (`id`, `email`, `success`, `reason`, `ip_address`, `us
 (47, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 06:05:08'),
 (48, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 08:12:10'),
 (49, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 08:12:11'),
-(50, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 08:45:18');
+(50, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 08:45:18'),
+(51, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 14:59:09'),
+(52, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 15:59:23'),
+(53, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 16:03:29'),
+(54, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 16:11:42'),
+(55, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 16:15:15'),
+(56, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 16:50:25'),
+(57, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 17:03:23'),
+(58, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 17:03:45'),
+(59, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 17:22:50'),
+(60, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 17:37:22'),
+(61, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:06:22'),
+(62, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:28:17'),
+(63, 'cj@gmail.com', 0, 'invalid_password', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:40:28'),
+(64, 'cj@gmail.com', 0, 'invalid_password', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:40:34'),
+(65, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:40:37'),
+(66, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:47:44'),
+(67, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:47:58'),
+(68, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:48:12'),
+(69, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:52:35'),
+(70, 'cj2@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:52:50'),
+(71, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:53:04'),
+(72, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 18:58:32'),
+(73, 'cj@gmail.com', 1, 'success', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-20 19:13:30');
 
 -- --------------------------------------------------------
 
@@ -480,7 +503,8 @@ CREATE TABLE `staff_warnings` (
 --
 
 INSERT INTO `staff_warnings` (`id`, `user_id`, `message`, `sent_by`, `read_at`, `created_at`) VALUES
-(1, 2, 'you miss a shift', 1, '2026-07-18 22:13:12', '2026-07-18 14:06:44');
+(1, 2, 'you miss a shift', 1, '2026-07-18 22:13:12', '2026-07-18 14:06:44'),
+(2, 2, 'don\'t let this happen again', 1, NULL, '2026-07-20 18:54:29');
 
 -- --------------------------------------------------------
 
@@ -549,6 +573,7 @@ CREATE TABLE `users` (
   `role` enum('admin','manager','cashier') NOT NULL DEFAULT 'cashier',
   `failed_attempts` int(11) NOT NULL DEFAULT 0,
   `locked_until` datetime DEFAULT NULL,
+  `last_seen` datetime DEFAULT NULL COMMENT 'Heartbeat — refreshed on every authenticated page load, used to tell if someone is really active right now vs. just logged in earlier today',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -556,10 +581,13 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `email`, `full_name`, `birth_date`, `phone`, `address`, `shift_start`, `shift_end`, `password_hash`, `role`, `failed_attempts`, `locked_until`, `created_at`) VALUES
-(1, 'cj@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, '$2b$10$hk.8sWnqskzHmy0GQiuhHuXIeIOk2MSBaMi.2Py4itLd16VJi/b0i', 'admin', 0, NULL, '2026-07-17 14:10:59'),
-(2, 'cj2@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, '$2b$10$iGmx8ypqPQOYsal/1Auqae4MM1v8U318shgdSGhja1q8YFnqu5jkK', 'cashier', 0, NULL, '2026-07-17 14:10:59'),
-(3, 'cj3@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, '$2y$10$xFL3ukEve6QyPh2A3UaNBuQv/tFpok0E.U0Y0YA6ZkcKEjYcPfBq.', 'cashier', 0, NULL, '2026-07-17 17:09:14');
+INSERT INTO `users` (`id`, `email`, `full_name`, `birth_date`, `phone`, `address`, `shift_start`, `shift_end`, `password_hash`, `role`, `failed_attempts`, `locked_until`, `last_seen`, `created_at`) VALUES
+(1, 'cj@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, '$2b$10$hk.8sWnqskzHmy0GQiuhHuXIeIOk2MSBaMi.2Py4itLd16VJi/b0i', 'admin', 0, NULL, '2026-07-21 03:13:31', '2026-07-17 14:10:59'),
+(2, 'cj2@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, '$2b$10$iGmx8ypqPQOYsal/1Auqae4MM1v8U318shgdSGhja1q8YFnqu5jkK', 'cashier', 0, NULL, '2026-07-21 02:52:54', '2026-07-17 14:10:59'),
+(3, 'cj3@gmail.com', NULL, NULL, NULL, NULL, NULL, NULL, '$2y$10$xFL3ukEve6QyPh2A3UaNBuQv/tFpok0E.U0Y0YA6ZkcKEjYcPfBq.', 'cashier', 0, NULL, NULL, '2026-07-17 17:09:14'),
+(8, 'christianmamaril003@gmail.com', 'juan', '2000-03-22', '421123213', 'dito lang', '07:00:00', '19:00:00', '$2y$10$HrdnZ8H1G/1SJkPPvjeX.OzCniNbYoaStejZHOLQAiJStePI5YQbi', 'cashier', 0, NULL, NULL, '2026-07-20 11:51:01'),
+(10, 'christianmamaril006@gmail.com', 'juan', '1999-03-17', '3213123', 'dito lang', '20:54:00', '21:54:00', '$2y$10$FdgUY02kqz2gsll6ubakHe.W4uSnKdMcYPOBa4J/eBpo7vkI9g5R.', 'cashier', 0, NULL, NULL, '2026-07-20 11:55:15'),
+(11, 'rivasjashleyt@gmail.com', 'jaja', '2005-07-29', '09075815484', 'dito lang', '15:00:00', '21:00:00', '$2y$10$o6utqNH52Yl1c75V6tI9neL6LuFiJMG39Tx0IW..8jKvUkpbYn0X6', 'cashier', 0, NULL, NULL, '2026-07-20 11:57:28');
 
 --
 -- Indexes for dumped tables
@@ -696,7 +724,8 @@ ALTER TABLE `stock_movements`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_users_email` (`email`);
+  ADD UNIQUE KEY `uq_users_email` (`email`),
+  ADD KEY `idx_users_last_seen` (`last_seen`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -712,7 +741,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `login_audit`
 --
 ALTER TABLE `login_audit`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
 
 --
 -- AUTO_INCREMENT for table `pending_orders`
@@ -784,7 +813,7 @@ ALTER TABLE `staff_concerns`
 -- AUTO_INCREMENT for table `staff_warnings`
 --
 ALTER TABLE `staff_warnings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `stock_movements`
@@ -796,7 +825,7 @@ ALTER TABLE `stock_movements`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- Constraints for dumped tables
