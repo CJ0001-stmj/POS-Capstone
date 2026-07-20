@@ -82,6 +82,16 @@ $stmt = $__notifPdo->query(
 $__notifPurchaseRequests = $stmt->fetchAll();
 $__pendingPrCount = (int) $__notifPdo->query("SELECT COUNT(*) c FROM purchase_requests WHERE status = 'pending'")->fetch()['c'];
 
+$stmt = $__notifPdo->query(
+    "SELECT email, ip_address, created_at
+     FROM login_audit
+     WHERE success = 1
+     ORDER BY created_at DESC
+     LIMIT 5"
+);
+$__notifRecentLogins = $stmt->fetchAll();
+$__recentLoginCount = (int) $__notifPdo->query("SELECT COUNT(*) c FROM login_audit WHERE success = 1 AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)")->fetch()['c'];
+
 $__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
 ?>
 <div class="notif-wrap">
@@ -100,6 +110,10 @@ $__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
                 <i class="fa-solid fa-inbox"></i> Concerns
                 <?php if ($__openConcernCount > 0): ?><span class="notif-tab-count"><?= (int) $__openConcernCount ?></span><?php endif; ?>
             </button>
+            <button class="notif-tab" data-tab="recentlogins">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Recent Logins
+                <?php if ($__recentLoginCount > 0): ?><span class="notif-tab-count"><?= (int) $__recentLoginCount ?></span><?php endif; ?>
+            </button>
             <button class="notif-tab" data-tab="timeinout"><i class="fa-solid fa-user-clock"></i> Time In/Out</button>
             <button class="notif-tab" data-tab="topproducts"><i class="fa-solid fa-ranking-star"></i> Top Products</button>
             <button class="notif-tab" data-tab="purchaserequests">
@@ -117,7 +131,24 @@ $__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
                     <span>From <?= htmlspecialchars(explode('@', $nc['submitted_by_email'])[0]) ?> &middot; <?= htmlspecialchars((new DateTime($nc['created_at']))->format('M j, g:i A')) ?> &middot; <?= $nc['status'] === 'open' ? 'Open' : 'In review' ?></span>
                 </div>
             <?php endforeach; endif; ?>
-            <a href="staff-inbox.php" class="notif-view-all">View all in Inbox <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="/si/staff-inbox.php" class="notif-view-all">View all in Inbox <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+
+        <div class="notif-list notif-pane" data-pane="recentlogins" style="display:none;">
+            <?php if (empty($__notifRecentLogins)): ?>
+                <p class="notif-empty">No recent logins.</p>
+            <?php else: foreach ($__notifRecentLogins as $rl): ?>
+                <div class="notif-item notif-item-unread">
+                    <p><?= htmlspecialchars(explode('@', $rl['email'])[0]) ?></p>
+                    <span><?= htmlspecialchars($rl['email']) ?> &middot; <?= htmlspecialchars((new DateTime($rl['created_at']))->format('M j, g:i A')) ?> &middot; IP: <?= htmlspecialchars($rl['ip_address'] ?? '—') ?></span>
+                </div>
+            <?php endforeach; endif; ?>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <a href="/aac/user-access-control.php" class="notif-view-all">View all <i class="fa-solid fa-arrow-right"></i></a>
+                <a href="download-logins.php?hours=24" class="notif-view-all" style="background: #e8f5e9; color: #2e7d32;" title="Download last 24 hours">
+                    <i class="fa-solid fa-download"></i> CSV
+                </a>
+            </div>
         </div>
 
         <div class="notif-list notif-pane" data-pane="timeinout" style="display:none;">
@@ -131,7 +162,7 @@ $__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
                     <span><?= htmlspecialchars($ti['role']) ?> &middot; <?= $ti['status'] === 'active' ? 'Timed in' : 'Timed out' ?> &middot; <?= htmlspecialchars($ti['note']) ?></span>
                 </div>
             <?php endforeach; endif; ?>
-            <a href="user-access-control.php" class="notif-view-all">View all in User Access <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="/aac/user-access-control.php" class="notif-view-all">View all in User Access <i class="fa-solid fa-arrow-right"></i></a>
         </div>
 
         <div class="notif-list notif-pane" data-pane="topproducts" style="display:none;">
@@ -143,7 +174,7 @@ $__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
                     <span><?= (int) $tp['units'] ?> units sold &middot; <?= htmlspecialchars($tp['revenue']) ?> revenue</span>
                 </div>
             <?php endforeach; endif; ?>
-            <a href="analytics.php" class="notif-view-all">View all in Analytics <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="/spas/analytics.php" class="notif-view-all">View all in Analytics <i class="fa-solid fa-arrow-right"></i></a>
         </div>
 
         <div class="notif-list notif-pane" data-pane="purchaserequests" style="display:none;">
@@ -155,7 +186,7 @@ $__notifBadgeCount = $__openConcernCount + $__pendingPrCount;
                     <span>From <?= htmlspecialchars($pr['supplier_name']) ?> &middot; sent in by <?= htmlspecialchars(explode('@', $pr['requested_by_email'])[0]) ?> &middot; <?= htmlspecialchars((new DateTime($pr['created_at']))->format('M j, g:i A')) ?></span>
                 </div>
             <?php endforeach; endif; ?>
-            <a href="purchase-requests.php" class="notif-view-all">View all in Purchase Requests <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="/pr/purchase-requests.php" class="notif-view-all">View all in Purchase Requests <i class="fa-solid fa-arrow-right"></i></a>
         </div>
     </div>
 </div>

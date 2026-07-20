@@ -74,10 +74,10 @@ $stmt->execute([':uid' => $_SESSION['user_id']]);
 $ownActivePrCount = (int) $stmt->fetch()['c'];
 
 $modules = [
-    ['icon' => 'fa-cash-register', 'title' => 'Point of Sale & Transactions', 'href' => 'pos.php'],
-    ['icon' => 'fa-dolly',         'title' => 'Purchase Request Management',  'href' => 'purchase-requests.php', 'badge' => $ownActivePrCount],
-    ['icon' => 'fa-bowl-food',     'title' => 'Customer Order & Reservation', 'href' => 'orders.php'],
-    ['icon' => 'fa-bullhorn',      'title' => 'Admin Messages',               'href' => 'admin-messages.php'],
+    ['icon' => 'fa-cash-register', 'title' => 'Point of Sale & Transactions', 'href' => '/pos/pos.php'],
+    ['icon' => 'fa-dolly',         'title' => 'Purchase Request Management',  'href' => '/pr/purchase-requests.php', 'badge' => $ownActivePrCount],
+    ['icon' => 'fa-bowl-food',     'title' => 'Customer Order & Reservation', 'href' => '/orm/orders.php'],
+    ['icon' => 'fa-bullhorn',      'title' => 'Admin Messages',               'href' => '/admin-messages.php'],
 ];
 ?>
 <!DOCTYPE html>
@@ -88,7 +88,8 @@ $modules = [
     <title>Dashboard - RAM-YUM STORE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="/dashboard.css">
+    <link rel="stylesheet" href="/idle-timeout.css">
 </head>
 <body>
 <div class="app-shell">
@@ -113,7 +114,7 @@ $modules = [
                         <strong><?= htmlspecialchars(explode('@', $userEmail)[0]) ?></strong>
                         <span><?= htmlspecialchars($roleLabel) ?></span>
                     </div>
-                    <a href="logout.php" class="logout-link" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></a>
+                    <a href="/logout.php" class="logout-link" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></a>
                 </div>
             </div>
         </header>
@@ -180,6 +181,7 @@ async function refreshShiftSales() {
 }
 setInterval(refreshShiftSales, 30000);
 </script>
-<script src="sidebar.js"></script>
+<script src="/idle-timeout.js"></script>
+<script src="/sidebar.js"></script>
 </body>
 </html>

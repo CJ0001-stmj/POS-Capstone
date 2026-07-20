@@ -302,7 +302,7 @@ body {
 }
 
 /* ================= INTRO SCREEN ================= */
-/* .intro-screen {
+.intro-screen {
 position: fixed;
 inset: 0;
 z-index: 9999;
@@ -469,10 +469,10 @@ to { opacity: 1; transform: translateY(0); }
 @keyframes introPulse {
 0%, 100% { opacity: 0.75; }
 50% { opacity: 0.3; }
-} */
+}
 
 /* /* Main container reveal */
-/* .main-container {
+.main-container {
 opacity: 0;
 }
 
@@ -483,4 +483,146 @@ animation: mainReveal 0.8s ease forwards;
 @keyframes mainReveal {
 from { opacity: 0; }
 to { opacity: 1; }
-} */
+}
+/* ================= RESPONSIVE OVERRIDES =================
+   Nothing above touched. These queries only override at
+   smaller widths so laptops/tablets/phones get workable layout. */
+
+/* Big laptops / small desktops */
+@media (max-width: 1440px) {
+    .bg-logo-cont {
+        top: -200px;
+        right: -500px;
+        width: 1200px;
+        height: 1200px;
+    }
+    .ramen-illustration {
+        width: 1000px;
+        top: 180px;
+        left: -40px;
+    }
+    .bg-image {
+        width: 1600px;
+        height: 800px;
+    }
+    .login-card {
+        left: 55%;
+        transform: translateX(-50%);
+        top: 200px;
+    }
+}
+
+/* Standard laptop screens (1280-1366 range) */
+@media (max-width: 1366px) {
+    .header {
+        top: 20px;
+        left: 30px;
+    }
+    .ram-title { font-size: 4.5rem; }
+    .login-card {
+        left: 50%;
+        transform: translateX(-50%);
+        top: 190px;
+        width: 520px;
+        height: 460px;
+        padding: 2.2rem 1.6rem;
+    }
+    .form-control1, .form-control2 {
+        width: 340px;
+        margin-left: 40px;
+    }
+    .form-control1:focus, .form-control1:not(:placeholder-shown),
+    .form-control2:focus, .form-control2:not(:placeholder-shown) {
+        width: 420px;
+    }
+    .rem-forg { width: 420px; margin-top: 190px; }
+    .btn-login { width: 420px; }
+    .logd { }
+    .btn-login:hover .logd { width: 420px; }
+}
+
+/* Smaller laptops / large tablets landscape */
+@media (max-width: 1200px) {
+    .bg-logo-cont { right: -650px; }
+    .ramen-illustration { opacity: 0.35; }
+}
+
+/* Tablets */
+@media (max-width: 992px) {
+    .header {
+        position: static;
+        justify-content: center;
+        margin: 30px auto 10px;
+        flex-direction: column;
+        text-align: center;
+    }
+    .header .ms-3 { margin: 10px 0 0 0 !important; text-align: center; }
+    .main-container {
+        flex-direction: column;
+        padding: 20px 0;
+    }
+    .login-card {
+        position: static;
+        transform: none;
+        margin: 20px auto;
+        width: 90%;
+        max-width: 480px;
+        height: auto;
+        padding: 2rem 1.2rem 2.5rem;
+    }
+    .form-control1, .form-control2 {
+        position: static;
+        width: 100% !important;
+        margin: 0 0 30px 0 !important;
+        transform: none !important;
+    }
+    .form-label1, .form-label2 {
+        top: -12px;
+        left: 20px;
+    }
+    .form-control1:focus ~ .form-label1,
+    .form-control1:not(:placeholder-shown) ~ .form-label1,
+    .form-control2:focus ~ .form-label2,
+    .form-control2:not(:placeholder-shown) ~ .form-label2 {
+        left: 20px;
+        transform: translateY(-140%);
+    }
+    .eye-pass {
+        top: 12px;
+        right: 15px;
+    }
+    .form-control2:focus ~ .eye-pass,
+    .form-control2:not(:placeholder-shown) ~ .eye-pass {
+        transform: none;
+    }
+    .rem-forg {
+        width: 100%;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .btn-login {
+        position: static;
+        width: 100%;
+    }
+    .btn-login:hover .logd { width: 100%; }
+    .bg-logo-cont, .ramen-illustration, .dsg, .dsg-image, .bg, .bg-image {
+        display: none;
+    }
+}
+
+/* Phones */
+@media (max-width: 576px) {
+    .ram-title { font-size: 2.6rem; letter-spacing: 2px; }
+    .subtitle { font-size: 0.9rem; }
+    .logo-circle { width: 90px; height: 90px; }
+    .login-card {
+        width: 94%;
+        padding: 1.6rem 1rem 2rem;
+        border-width: 3px;
+    }
+    .log-tit { font-size: 1.4rem; }
+    .footer-text { margin-top: 40px; font-size: 0.85rem; }
+    .intro-title { font-size: 2.6rem; letter-spacing: 3px; }
+    .intro-logo, .intro-logo-wrap { width: 120px; height: 120px; }
+}

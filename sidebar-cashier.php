@@ -23,46 +23,46 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 $cashierNavItems = [
     [
         'label' => 'Overview',
-        'href'  => 'dashboard.php',
+        'href'  => '/dashboard.php',
         'icon'  => 'fa-gauge-high',
         'match' => ['dashboard.php'],
     ],
     [
         'label' => 'Point of Sale',
-        'href'  => 'pos.php',
+        'href'  => '/pos/pos.php',
         'icon'  => 'fa-cash-register',
         'match' => ['pos.php', 'stock-monitoring.php', 'receipt-history.php'],
         'children' => [
-            ['label' => 'New Transaction',   'href' => 'pos.php',                'icon' => 'fa-cash-register'],
-            ['label' => 'Stock Monitoring',  'href' => 'stock-monitoring.php',   'icon' => 'fa-boxes-stacked'],
-            ['label' => 'Receipt History',   'href' => 'receipt-history.php',    'icon' => 'fa-clock-rotate-left'],
+            ['label' => 'New Transaction',   'href' => '/pos/pos.php',                'icon' => 'fa-cash-register'],
+            ['label' => 'Stock Monitoring',  'href' => '/pos/stock-monitoring.php',   'icon' => 'fa-boxes-stacked'],
+            ['label' => 'Receipt History',   'href' => '/pos/receipt-history.php',    'icon' => 'fa-clock-rotate-left'],
         ],
     ],
     [
         'label' => 'Purchase Requests',
-        'href'  => 'purchase-requests.php',
+        'href'  => '/pr/purchase-requests.php',
         'icon'  => 'fa-dolly',
         'match' => ['purchase-requests.php'],
     ],
     [
         'label' => 'Orders & Reservations',
-        'href'  => 'orders.php',
+        'href'  => '/orm/orders.php',
         'icon'  => 'fa-bowl-food',
         'match' => ['orders.php', 'order-history.php'],
         'children' => [
-            ['label' => 'New Transaction',   'href' => 'orders.php',        'icon' => 'fa-bowl-food'],
-            ['label' => 'Purchase History',  'href' => 'order-history.php', 'icon' => 'fa-clock-rotate-left'],
+            ['label' => 'New Transaction',   'href' => '/orm/orders.php',        'icon' => 'fa-bowl-food'],
+            ['label' => 'Purchase History',  'href' => '/orm/order-history.php', 'icon' => 'fa-clock-rotate-left'],
         ],
     ],
     [
         'label' => 'Concerns',
-        'href'  => 'staff-concern.php',
+        'href'  => '/sc/staff-concern.php',
         'icon'  => 'fa-comments',
         'match' => ['staff-concern.php'],
     ],
     [
         'label' => 'Admin Messages',
-        'href'  => 'admin-messages.php',
+        'href'  => '/sc/admin-messages.php',
         'icon'  => 'fa-bullhorn',
         'match' => ['admin-messages.php'],
     ],
@@ -70,7 +70,7 @@ $cashierNavItems = [
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <img src="assets/logo.png" alt="RAM-YUM Logo">
+        <img src="/assets/logo.png" alt="RAM-YUM Logo">
         <div class="brand-text">
             <strong>RAM-YUM</strong>
             <span>Store Management</span>
@@ -91,7 +91,7 @@ $cashierNavItems = [
                 </a>
                 <ul class="submenu">
                     <?php foreach ($item['children'] as $child): ?>
-                    <li class="<?= $currentPage === $child['href'] ? 'active' : '' ?>">
+                    <li class="<?= $currentPage === basename($child['href']) ? 'active' : '' ?>">
                         <a href="<?= htmlspecialchars($child['href']) ?>">
                             <i class="fa-solid <?= htmlspecialchars($child['icon']) ?>"></i> <?= htmlspecialchars($child['label']) ?>
                         </a>

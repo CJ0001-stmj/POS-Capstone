@@ -1,0 +1,107 @@
+/* Session timeout warning modal — matches dashboard.css --ram-* theme */
+
+.idle-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43, 24, 16, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.idle-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.idle-modal {
+    background: var(--ram-cream, #fff9e6);
+    border-top: 4px solid var(--ram-red, #750b1d);
+    border-radius: 10px;
+    max-width: 380px;
+    width: 90%;
+    padding: 24px 24px 20px;
+    box-shadow: 0 12px 32px rgba(43, 24, 16, 0.35);
+    text-align: center;
+    transform: translateY(-12px) scale(0.97);
+    transition: transform 0.2s ease;
+}
+
+.idle-overlay.open .idle-modal {
+    transform: translateY(0) scale(1);
+}
+
+.idle-modal-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: var(--ram-yellow, #f9e076);
+    color: var(--ram-red, #750b1d);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.idle-modal h3 {
+    margin: 0 0 8px;
+    color: var(--ram-red, #750b1d);
+    font-size: 1.15rem;
+}
+
+.idle-modal p {
+    margin: 0 0 4px;
+    color: var(--ram-ink, #2b1810);
+    font-size: 0.9rem;
+}
+
+.idle-modal-countdown {
+    display: block;
+    margin: 6px 0 18px;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--ram-warn, #b8790b);
+    font-variant-numeric: tabular-nums;
+}
+
+.idle-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.idle-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 9px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.idle-btn:hover {
+    opacity: 0.88;
+}
+
+.idle-btn-stay {
+    background: var(--ram-red, #750b1d);
+    color: var(--ram-cream, #fff9e6);
+}
+
+.idle-btn-logout {
+    background: transparent;
+    color: var(--ram-muted, #8a7a5c);
+    border: 1px solid var(--ram-muted, #8a7a5c);
+}
+
+@media (max-width: 420px) {
+    .idle-modal-actions {
+        flex-direction: column;
+    }
+}

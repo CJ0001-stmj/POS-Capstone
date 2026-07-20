@@ -3,6 +3,28 @@
 // In a real deployment, load these from environment variables instead of
 // hardcoding credentials in a file that sits in your web root.
 
+// --------------------------------------------------------------
+// PSR-4‑like autoloader for the Psr\Log namespace (stub).
+// This project does not use Composer, but PHPMailer references
+// Psr\Log\LoggerInterface.  The stub avoids "undefined type" errors.
+// --------------------------------------------------------------
+spl_autoload_register(function (string $class): void {
+    $prefix   = 'Psr\\Log\\';
+    $baseDir  = __DIR__ . DIRECTORY_SEPARATOR . 'Psr' . DIRECTORY_SEPARATOR . 'Log' . DIRECTORY_SEPARATOR;
+    $len      = strlen($prefix);
+
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return; // not our namespace
+    }
+
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . str_replace('\\', DIRECTORY_SEPARATOR, $relativeClass) . '.php';
+
+    if (file_exists($file)) {
+        require $file;
+    }
+});
+
 define('DB_HOST', '127.0.0.1');
 define('DB_NAME', 'mms');
 define('DB_USER', 'root');

@@ -23,58 +23,58 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 $navItems = [
     [
         'label' => 'Overview',
-        'href'  => 'dashboard.php',
+        'href'  => '/dashboard.php',
         'icon'  => 'fa-gauge-high',
         'match' => ['dashboard.php'],
     ],
     [
         'label' => 'Point of Sale',
-        'href'  => 'pos.php',
+        'href'  => '/pos/pos.php',
         'icon'  => 'fa-cash-register',
         'match' => ['pos.php', 'stock-monitoring.php', 'receipt-history.php'],
         'children' => [
-            ['label' => 'New Transaction',   'href' => 'pos.php',                'icon' => 'fa-cash-register'],
-            ['label' => 'Stock Monitoring',  'href' => 'stock-monitoring.php',   'icon' => 'fa-boxes-stacked'],
-            ['label' => 'Receipt History',   'href' => 'receipt-history.php',    'icon' => 'fa-clock-rotate-left'],
+            ['label' => 'New Transaction',   'href' => '/pos/pos.php',                'icon' => 'fa-cash-register'],
+            ['label' => 'Stock Monitoring',  'href' => '/pos/stock-monitoring.php',   'icon' => 'fa-boxes-stacked'],
+            ['label' => 'Receipt History',   'href' => '/pos/receipt-history.php',    'icon' => 'fa-clock-rotate-left'],
         ],
     ],
     [
         'label' => 'Purchase Requests',
-        'href'  => 'purchase-requests.php',
+        'href'  => '/pr/purchase-requests.php',
         'icon'  => 'fa-dolly',
         'match' => ['purchase-requests.php'],
     ],
     [
         'label' => 'Orders & Reservations',
-        'href'  => 'orders.php',
+        'href'  => '/orm/orders.php',
         'icon'  => 'fa-bowl-food',
         'match' => ['orders.php', 'order-history.php'],
         'children' => [
-            ['label' => 'New Transaction',   'href' => 'orders.php',        'icon' => 'fa-bowl-food'],
-            ['label' => 'Purchase History',  'href' => 'order-history.php', 'icon' => 'fa-clock-rotate-left'],
+            ['label' => 'New Transaction',   'href' => '/orm/orders.php',        'icon' => 'fa-bowl-food'],
+            ['label' => 'Purchase History',  'href' => '/orm/order-history.php', 'icon' => 'fa-clock-rotate-left'],
         ],
     ],
     [
         'label' => 'Sales Analytics',
-        'href'  => 'analytics.php',
+        'href'  => '/spas/analytics.php',
         'icon'  => 'fa-chart-line',
         'match' => ['analytics.php'],
     ],
     [
         'label' => 'Promotions',
-        'href'  => 'promotions.php',
+        'href'  => '/prm/promotions.php',
         'icon'  => 'fa-tags',
         'match' => ['promotions.php'],
     ],
     [
         'label' => 'Audit & Access',
-        'href'  => 'audit-overview.php',
+        'href'  => '/aac/audit-overview.php',
         'icon'  => 'fa-user-shield',
         'match' => ['audit-overview.php', 'user-access-control.php', 'staff-inbox.php'],
         'children' => [
-            ['label' => 'Overview',             'href' => 'audit-overview.php',      'icon' => 'fa-chart-pie'],
-            ['label' => 'User Access Control',  'href' => 'user-access-control.php', 'icon' => 'fa-user-lock'],
-            ['label' => 'Inbox',                'href' => 'staff-inbox.php',         'icon' => 'fa-inbox'],
+            ['label' => 'Overview',             'href' => '/aac/audit-overview.php',      'icon' => 'fa-chart-pie'],
+            ['label' => 'User Access Control',  'href' => '/aac/user-access-control.php', 'icon' => 'fa-user-lock'],
+            ['label' => 'Inbox',                'href' => '/si/staff-inbox.php',          'icon' => 'fa-inbox'],
         ],
     ],
 ];
@@ -84,7 +84,7 @@ $navItems = [
 // Orders & Reservations. Analytics/Promotions/Audit stay admin+manager only.
 $userRole = $_SESSION['user_role'] ?? 'cashier';
 if ($userRole === 'cashier') {
-    $cashierHrefs = ['dashboard.php', 'pos.php', 'stock-monitoring.php', 'receipt-history.php', 'purchase-requests.php', 'orders.php', 'order-history.php'];
+    $cashierHrefs = ['/dashboard.php', '/pos/pos.php', '/pr/purchase-requests.php', '/orm/orders.php'];
     $navItems = array_values(array_filter($navItems, function ($item) use ($cashierHrefs) {
         return in_array($item['href'], $cashierHrefs, true);
     }));
@@ -92,7 +92,7 @@ if ($userRole === 'cashier') {
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <img src="assets/logo.png" alt="RAM-YUM Logo">
+        <img src="/assets/logo.png" alt="RAM-YUM Logo">
         <div class="brand-text">
             <strong>RAM-YUM</strong>
             <span>Store Management</span>
@@ -113,7 +113,7 @@ if ($userRole === 'cashier') {
                 </a>
                 <ul class="submenu">
                     <?php foreach ($item['children'] as $child): ?>
-                    <li class="<?= $currentPage === $child['href'] ? 'active' : '' ?>">
+                    <li class="<?= $currentPage === basename($child['href']) ? 'active' : '' ?>">
                         <a href="<?= htmlspecialchars($child['href']) ?>">
                             <i class="fa-solid <?= htmlspecialchars($child['icon']) ?>"></i> <?= htmlspecialchars($child['label']) ?>
                         </a>

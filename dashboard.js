@@ -149,6 +149,61 @@ function renderSalesChart() {
     });
 }
 
+// Cashier active status — refresh every 30s so the panel reflects who's
+// really active right now (see cashier-status-lib.php), not just a
+// snapshot from when the page first loaded.
+function escapeHtmlDash(str) {
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
+    return div.innerHTML;
+}
+
+async function refreshCashierStatus() {
+    const list = document.getElementById('cashierStatusList');
+    const card = document.getElementById('cashierStatusCard');
+    if (!card) return; // panel not on this page (or cashier viewing dashboard-cashier.php)
+
+    try {
+        const res = await fetch('cashier-status.php', { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.ok) return;
+
+        if (data.cashiers.length === 0) {
+            card.querySelector('.cashier-list')?.remove();
+            if (!card.querySelector('.empty-note')) {
+                card.insertAdjacentHTML('beforeend', '<p class="empty-note" id="cashierStatusEmpty">No staff logins recorded yet.</p>');
+            }
+            return;
+        }
+
+        const html = data.cashiers.map(c => `
+            <li>
+                <span class="cashier-avatar">${escapeHtmlDash(c.name.charAt(0).toUpperCase())}</span>
+                <div class="cashier-info">
+                    <strong>${escapeHtmlDash(c.name)}</strong>
+                    <span>${escapeHtmlDash(c.role)}</span>
+                </div>
+                <div class="cashier-status">
+                    <span class="status-dot status-${c.status}"></span>
+                    <span class="status-text">${escapeHtmlDash(c.status.charAt(0).toUpperCase() + c.status.slice(1))}</span>
+                    <small>${escapeHtmlDash(c.note)}</small>
+                </div>
+            </li>
+        `).join('');
+
+        if (list) {
+            list.innerHTML = html;
+        } else {
+            document.getElementById('cashierStatusEmpty')?.remove();
+            card.insertAdjacentHTML('beforeend', `<ul class="cashier-list" id="cashierStatusList">${html}</ul>`);
+        }
+    } catch (err) {
+        console.error('Cashier status refresh failed:', err);
+    }
+}
+setInterval(refreshCashierStatus, 30000);
+
 // Update profit margins on load
 document.addEventListener('DOMContentLoaded', () => {
     updateDateTime();

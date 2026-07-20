@@ -771,6 +771,19 @@ body {
 .status-dot.status-break { background: var(--ram-warn); box-shadow: 0 0 0 3px rgba(184,121,11,0.15); }
 .status-dot.status-offline { background: #9a9a9a; box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
 
+.live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--ram-good);
+    margin-left: 6px;
+    animation: ram-live-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ram-live-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(46,125,79,0.35); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(46,125,79,0); }
+}
+
 /* low stock */
 .stock-badge {
     font-size: 0.68rem;
